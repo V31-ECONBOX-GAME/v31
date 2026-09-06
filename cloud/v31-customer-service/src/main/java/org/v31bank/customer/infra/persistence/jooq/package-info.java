@@ -14,17 +14,7 @@
  * limitations under the License.
  */
 
-package org.v31bank.customer.presentation.dto;
+@NullMarked
+package org.v31bank.customer.infra.persistence.jooq;
 
-import java.util.UUID;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
-
-import org.v31bank.customer.domain.constant.CustomerCategoryStatus;
-
-public record CustomerCategoryRequest(@NotBlank @Size(max = 64) String code, @NotBlank @Size(max = 100) String name,
-		UUID parentId, @PositiveOrZero Integer sortOrder, CustomerCategoryStatus status) {
-
-}
+import org.jspecify.annotations.NullMarked;

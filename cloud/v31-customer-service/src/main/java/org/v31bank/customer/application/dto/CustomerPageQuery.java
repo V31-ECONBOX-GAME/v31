@@ -16,34 +16,36 @@
 
 package org.v31bank.customer.application.dto;
 
+import org.jspecify.annotations.Nullable;
+
 import org.v31bank.core.PageQuery;
 import org.v31bank.customer.domain.constant.CustomerStatus;
 
 /**
- * Paginated customer query with optional filters.
+ * Customer page query.
  *
  * @author Xander Wang
  * @since 0.2.0
  */
 public class CustomerPageQuery extends PageQuery {
 
-	private String email;
+	private @Nullable String email;
 
-	private CustomerStatus status;
+	private @Nullable CustomerStatus status;
 
-	public String getEmail() {
+	public @Nullable String getEmail() {
 		return this.email;
 	}
 
-	public void setEmail(String email) {
+	public void setEmail(@Nullable String email) {
 		this.email = email;
 	}
 
-	public CustomerStatus getStatus() {
+	public @Nullable CustomerStatus getStatus() {
 		return this.status;
 	}
 
-	public void setStatus(CustomerStatus status) {
+	public void setStatus(@Nullable CustomerStatus status) {
 		this.status = status;
 	}
 

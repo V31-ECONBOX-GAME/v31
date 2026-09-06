@@ -28,7 +28,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import org.v31bank.core.HttpResponse;
-import org.v31bank.core.PageQuery;
+import org.v31bank.customer.application.dto.CustomerPageQuery;
 import org.v31bank.customer.application.port.out.CustomerPort;
 import org.v31bank.customer.domain.constant.CustomerStatus;
 import org.v31bank.customer.domain.model.Customer;
@@ -36,7 +36,7 @@ import org.v31bank.customer.infra.persistence.jpa.JpaCustomerRepository;
 import org.v31bank.data.jpa.JpaPages;
 
 /**
- * {@link CustomerPort} adapter backed by Spring Data JPA.
+ * {@link CustomerPort} over JPA.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -61,7 +61,9 @@ public class CustomerPersistenceAdapter implements CustomerPort {
 	}
 
 	@Override
-	public HttpResponse<List<Customer>> findPage(String email, CustomerStatus status, PageQuery pageQuery) {
+	public HttpResponse<List<Customer>> findPage(CustomerPageQuery pageQuery) {
+		String email = pageQuery.getEmail();
+		CustomerStatus status = pageQuery.getStatus();
 		Specification<Customer> spec = (root, query, cb) -> {
 			List<Predicate> predicates = new ArrayList<>();
 			if (StringUtils.hasText(email)) {

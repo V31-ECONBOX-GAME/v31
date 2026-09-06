@@ -14,22 +14,7 @@
  * limitations under the License.
  */
 
-package org.v31bank.customer;
+@NullMarked
+package org.v31bank.customer.infra.cache.adapter;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-/**
- * Entry point.
- *
- * @author Xander Wang
- * @since 0.2.0
- */
-@SpringBootApplication
-public class CustomerApplication {
-
-	static void main(String[] args) {
-		SpringApplication.run(CustomerApplication.class, args);
-	}
-
-}
+import org.jspecify.annotations.NullMarked;

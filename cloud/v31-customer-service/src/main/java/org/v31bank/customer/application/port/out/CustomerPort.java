@@ -21,12 +21,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.v31bank.core.HttpResponse;
-import org.v31bank.core.PageQuery;
-import org.v31bank.customer.domain.constant.CustomerStatus;
+import org.v31bank.customer.application.dto.CustomerPageQuery;
 import org.v31bank.customer.domain.model.Customer;
 
 /**
- * Output port for {@link Customer} persistence, implemented by the infrastructure layer.
+ * {@link Customer} persistence port.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -37,7 +36,7 @@ public interface CustomerPort {
 
 	Optional<Customer> findById(UUID id);
 
-	HttpResponse<List<Customer>> findPage(String email, CustomerStatus status, PageQuery pageQuery);
+	HttpResponse<List<Customer>> findPage(CustomerPageQuery query);
 
 	void delete(Customer customer);
 

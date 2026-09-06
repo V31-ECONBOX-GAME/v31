@@ -31,7 +31,7 @@ import org.v31bank.customer.domain.constant.CustomerStatus;
 import org.v31bank.customer.domain.model.Customer;
 
 /**
- * Default {@link CustomerUseCase} implementation.
+ * Default {@link CustomerUseCase}.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -63,7 +63,7 @@ public class CustomerService implements CustomerUseCase {
 	@Override
 	@Transactional(readOnly = true)
 	public HttpResponse<List<Customer>> page(CustomerPageQuery query) {
-		return this.customerRepository.findPage(query.getEmail(), query.getStatus(), query);
+		return this.customerRepository.findPage(query);
 	}
 
 	@Override
@@ -71,9 +71,7 @@ public class CustomerService implements CustomerUseCase {
 		return this.customerRepository.findById(id).map((customer) -> {
 			customer.setEmail(email);
 			customer.setFullName(fullName);
-			if (status != null) {
-				customer.setStatus(status);
-			}
+			customer.setStatus(status);
 			return this.customerRepository.save(customer);
 		});
 	}

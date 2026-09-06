@@ -15,6 +15,6 @@
  */
 
 @NullMarked
-package org.v31bank.customer.domain.service;
+package org.v31bank.customer.infra.config;
 
 import org.jspecify.annotations.NullMarked;

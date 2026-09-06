@@ -14,18 +14,7 @@
  * limitations under the License.
  */
 
-package org.v31bank.customer.domain.constant;
+@NullMarked
+package org.v31bank.customer.infra.grpc.adapter;
 
-/**
- * Lifecycle status of a customer category.
- *
- * @author Xander Wang
- * @since 0.2.0
- */
-public enum CustomerCategoryStatus {
-
-	ENABLED,
-
-	DISABLED
-
-}
+import org.jspecify.annotations.NullMarked;

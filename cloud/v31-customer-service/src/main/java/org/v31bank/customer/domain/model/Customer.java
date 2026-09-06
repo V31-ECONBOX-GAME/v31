@@ -27,7 +27,7 @@ import org.v31bank.customer.domain.constant.CustomerStatus;
 import org.v31bank.data.jpa.Audited;
 
 /**
- * A customer of the bank.
+ * A customer.
  *
  * @author Xander Wang
  * @since 0.2.0

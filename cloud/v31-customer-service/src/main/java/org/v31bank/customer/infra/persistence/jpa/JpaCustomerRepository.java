@@ -24,7 +24,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.v31bank.customer.domain.model.Customer;
 
 /**
- * Spring Data JPA repository for {@link Customer}.
+ * {@link Customer} repository.
  *
  * @author Xander Wang
  * @since 0.2.0

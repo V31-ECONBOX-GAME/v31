@@ -21,8 +21,7 @@ import java.util.Currency;
 import java.util.Objects;
 
 /**
- * A Value Object is an object that combines a group of business-related fields into a
- * single meaningful concept.
+ * An amount and its currency.
  *
  * @param amount how much, never negative
  * @param currency what the amount is denominated in

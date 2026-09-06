@@ -17,7 +17,7 @@
 package org.v31bank.customer.domain.constant;
 
 /**
- * Lifecycle status of a customer.
+ * Customer lifecycle.
  *
  * @author Xander Wang
  * @since 0.2.0

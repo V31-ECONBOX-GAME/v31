@@ -26,7 +26,7 @@ import org.v31bank.customer.domain.constant.CustomerStatus;
 import org.v31bank.customer.domain.model.Customer;
 
 /**
- * Use cases for managing customers.
+ * Customer use cases.
  *
  * @author Xander Wang
  * @since 0.2.0

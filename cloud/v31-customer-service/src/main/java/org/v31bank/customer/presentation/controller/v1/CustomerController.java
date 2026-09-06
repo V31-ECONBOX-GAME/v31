@@ -40,7 +40,7 @@ import org.v31bank.customer.presentation.dto.CustomerRequest;
 import org.v31bank.customer.presentation.dto.CustomerResponse;
 
 /**
- * REST endpoints for managing customers.
+ * Customer endpoints.
  *
  * @author Xander Wang
  * @since 0.2.0
