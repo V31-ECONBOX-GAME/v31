@@ -47,11 +47,11 @@ class V31WebAutoConfigurationTests {
 	}
 
 	@Test
-	void addsNothingWhenTurnedOff() {
-		this.runner.withPropertyValues("v31.web.exception-handling.enabled=false").run((context) -> {
-			assertThat(context).doesNotHaveBean(HttpResponseExceptionHandler.class);
-			assertThat(context).doesNotHaveBean(DataAccessExceptionHandler.class);
-		});
+	void proxiesTheNestedConfiguration() {
+		this.runner.run((context) -> assertThat(
+				context.getBean(V31WebAutoConfiguration.DataAccessExceptionHandlerConfiguration.class))
+			.as("dropping @Configuration leaves the class registered but unproxied, which nothing else here notices")
+			.isNotExactlyInstanceOf(V31WebAutoConfiguration.DataAccessExceptionHandlerConfiguration.class));
 	}
 
 	@Test
@@ -68,14 +68,7 @@ class V31WebAutoConfigurationTests {
 			.run((context) -> assertThat(context).doesNotHaveBean(HttpResponseExceptionHandler.class));
 	}
 
-	@Test
-	void bindsItsProperties() {
-		this.runner
-			.run((context) -> assertThat(context.getBean(V31WebProperties.class).getExceptionHandling().isEnabled())
-				.isTrue());
-	}
-
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class CustomHandlerConfiguration {
 
 		@Bean

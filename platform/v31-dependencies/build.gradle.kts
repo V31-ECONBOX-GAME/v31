@@ -31,11 +31,9 @@ dependencies {
     constraints {
         api("com.google.guava:guava:33.6.0-jre")
 
-        api(project(":apis:v31-cbs-api"))
         api(project(":apis:v31-compliance-api"))
         api(project(":apis:v31-customer-api"))
         api(project(":apis:v31-ledger-api"))
-        api(project(":apis:v31-notification-api"))
         api(project(":apis:v31-risk-api"))
         api(project(":apis:v31-transfer-api"))
 

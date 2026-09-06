@@ -86,7 +86,7 @@ class V31JooqAutoConfigurationTests {
 		return Arrays.stream(configuration.recordListenerProviders()).map(RecordListenerProvider::provide).toArray();
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class CustomAuditorConfiguration {
 
 		@Bean

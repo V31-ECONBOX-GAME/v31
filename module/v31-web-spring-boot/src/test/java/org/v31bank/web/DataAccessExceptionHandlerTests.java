@@ -18,7 +18,6 @@ package org.v31bank.web;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -57,14 +56,6 @@ class DataAccessExceptionHandlerTests {
 	}
 
 	@Test
-	void reportsALostRaceForTheSameRowAsAConflictToo() throws Exception {
-		this.mvc.perform(get("/stale"))
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.code").value(HttpStatus.CONFLICT.value()))
-			.andExpect(jsonPath("$.message").value("The record changed while this request was in flight"));
-	}
-
-	@Test
 	void takesPrecedenceOverTheCatchAll() throws Exception {
 		this.mvc.perform(get("/duplicate")).andExpect(status().isConflict());
 		this.mvc.perform(get("/other")).andExpect(status().isInternalServerError());
@@ -78,11 +69,6 @@ class DataAccessExceptionHandlerTests {
 			throw new DataIntegrityViolationException(
 					"duplicate key value violates unique constraint \"uk_customer_email\" "
 							+ "for table customer_service.customer");
-		}
-
-		@GetMapping("/stale")
-		String stale() {
-			throw new OptimisticLockingFailureException("Row was updated by another transaction");
 		}
 
 		@GetMapping("/other")

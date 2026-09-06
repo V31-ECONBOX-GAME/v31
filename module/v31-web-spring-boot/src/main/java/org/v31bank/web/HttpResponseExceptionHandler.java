@@ -16,8 +16,9 @@
 
 package org.v31bank.web;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
@@ -41,7 +42,7 @@ import org.v31bank.core.HttpResponse;
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 public class HttpResponseExceptionHandler extends ResponseEntityExceptionHandler {
 
-	private static final Logger logger = LoggerFactory.getLogger(HttpResponseExceptionHandler.class);
+	private static final Log logger = LogFactory.getLog(HttpResponseExceptionHandler.class);
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<HttpResponse<Void>> handleUnexpectedException(Exception ex) {
@@ -52,12 +53,13 @@ public class HttpResponseExceptionHandler extends ResponseEntityExceptionHandler
 	}
 
 	@Override
-	protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
-			HttpStatusCode statusCode, WebRequest request) {
-		logger.debug("Rejected with {} ({})", statusCode, ex.getClass().getSimpleName());
-		HttpResponse<?> envelope = (body instanceof HttpResponse<?> supplied) ? supplied
-				: HttpResponse.error(statusCode.value(), reasonPhraseOf(statusCode));
-		return super.handleExceptionInternal(ex, envelope, headers, statusCode, request);
+	protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body,
+			HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Rejected with " + statusCode + " (" + ex.getClass().getSimpleName() + ")");
+		}
+		return super.handleExceptionInternal(ex, HttpResponse.error(statusCode.value(), reasonPhraseOf(statusCode)),
+				headers, statusCode, request);
 	}
 
 	private static String reasonPhraseOf(HttpStatusCode statusCode) {

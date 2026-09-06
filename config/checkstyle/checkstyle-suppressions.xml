@@ -3,7 +3,6 @@
 		"-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
 		"https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
-	<suppress checks="JavadocPackage"/>
 	<suppress files="[\\/]src[\\/]test(Fixtures)?[\\/]java[\\/]" checks="Javadoc.*"/>
 	<suppress files="[\\/]src[\\/]intTest[\\/]java[\\/]" checks="Javadoc.*"/>
 	<suppress files="[\\/]src[\\/]test(Fixtures)?[\\/]java[\\/]" checks="SpringJavadoc"/>

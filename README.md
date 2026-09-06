@@ -75,7 +75,7 @@ domain
 ├── valueobject    Immutable, identity-free types compared by value: Money, Email,
 │                  AccountNumber. They carry behaviour, unlike DTOs.
 ├── constant       Enums naming the states and kinds the rules branch on: CustomerStatus,
-│                  NotificationChannel. Domain vocabulary, so not in Presentation.
+│                  RiskSeverity. Domain vocabulary, so not in Presentation.
 ├── service        Business rules that span aggregates and therefore belong to no single
 │                  entity. No persistence, no transactions, no I/O.
 ├── event          Facts expressed in domain language, recorded by aggregates and published

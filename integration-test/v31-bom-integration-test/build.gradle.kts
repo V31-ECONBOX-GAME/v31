@@ -26,11 +26,9 @@ val testRepository = configurations.create("testRepository")
 dependencies {
     for (path in listOf(
         ":platform:v31-dependencies",
-        ":apis:v31-cbs-api",
         ":apis:v31-compliance-api",
         ":apis:v31-customer-api",
         ":apis:v31-ledger-api",
-        ":apis:v31-notification-api",
         ":apis:v31-risk-api",
         ":apis:v31-transfer-api",
         ":library:v31-core",

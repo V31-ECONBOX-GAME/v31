@@ -22,6 +22,8 @@ plugins {
 description = "Core infrastructure shared across all V31 services"
 
 dependencies {
+    api("org.jspecify:jspecify")
+
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")
 }

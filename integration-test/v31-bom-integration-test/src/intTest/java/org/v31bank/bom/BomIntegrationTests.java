@@ -33,11 +33,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class BomIntegrationTests {
 
-	private static final List<String> ARTIFACTS = List.of("v31-cbs-api", "v31-compliance-api", "v31-customer-api",
-			"v31-ledger-api", "v31-notification-api", "v31-risk-api", "v31-transfer-api", "v31-core",
-			"v31-data-jpa-spring-boot", "v31-data-valkey-spring-boot", "v31-grpc-spring-boot", "v31-jooq-spring-boot",
-			"v31-web-spring-boot", "v31-data-jpa-spring-boot-starter", "v31-data-valkey-spring-boot-starter",
-			"v31-grpc-spring-boot-starter", "v31-jooq-spring-boot-starter", "v31-web-spring-boot-starter");
+	private static final List<String> ARTIFACTS = List.of("v31-compliance-api", "v31-customer-api", "v31-ledger-api",
+			"v31-risk-api", "v31-transfer-api", "v31-core", "v31-data-jpa-spring-boot", "v31-data-valkey-spring-boot",
+			"v31-grpc-spring-boot", "v31-jooq-spring-boot", "v31-web-spring-boot", "v31-data-jpa-spring-boot-starter",
+			"v31-data-valkey-spring-boot-starter", "v31-grpc-spring-boot-starter", "v31-jooq-spring-boot-starter",
+			"v31-web-spring-boot-starter");
 
 	@TempDir
 	private Path consumer;

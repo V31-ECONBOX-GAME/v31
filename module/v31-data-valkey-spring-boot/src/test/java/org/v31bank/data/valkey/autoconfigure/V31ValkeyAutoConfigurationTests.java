@@ -243,7 +243,7 @@ class V31ValkeyAutoConfigurationTests {
 
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class RedisConnectionConfiguration {
 
 		@Bean
@@ -258,7 +258,7 @@ class V31ValkeyAutoConfigurationTests {
 
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class CustomTemplateConfiguration {
 
 		private final RedisTemplate<String, Object> template = new RedisTemplate<>();

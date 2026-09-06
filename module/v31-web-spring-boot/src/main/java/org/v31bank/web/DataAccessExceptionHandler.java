@@ -16,12 +16,11 @@
 
 package org.v31bank.web;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,23 +38,13 @@ import org.v31bank.core.HttpResponse;
 @Order(Ordered.LOWEST_PRECEDENCE - 200)
 public class DataAccessExceptionHandler {
 
-	private static final Logger logger = LoggerFactory.getLogger(DataAccessExceptionHandler.class);
+	private static final Log logger = LogFactory.getLog(DataAccessExceptionHandler.class);
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<HttpResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
 		logger.warn("Write refused by the database", ex);
-		return conflict(HttpStatus.CONFLICT.getReasonPhrase());
-	}
-
-	@ExceptionHandler(OptimisticLockingFailureException.class)
-	public ResponseEntity<HttpResponse<Void>> handleOptimisticLockingFailure(OptimisticLockingFailureException ex) {
-		logger.debug("Concurrent modification", ex);
-		return conflict("The record changed while this request was in flight");
-	}
-
-	private static ResponseEntity<HttpResponse<Void>> conflict(String message) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(HttpResponse.error(HttpStatus.CONFLICT.value(), message));
+			.body(HttpResponse.error(HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase()));
 	}
 
 }

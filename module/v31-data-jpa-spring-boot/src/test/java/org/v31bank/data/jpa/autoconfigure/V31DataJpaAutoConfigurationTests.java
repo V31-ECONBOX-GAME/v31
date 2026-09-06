@@ -105,13 +105,13 @@ class V31DataJpaAutoConfigurationTests {
 		return ((AuditorAware<String>) auditorAware).getCurrentAuditor();
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	@EntityScan(basePackageClasses = V31DataJpaAutoConfigurationTests.class)
 	static class PersistenceConfiguration {
 
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class SuppliedAuditorConfiguration {
 
 		@Bean
@@ -121,7 +121,7 @@ class V31DataJpaAutoConfigurationTests {
 
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class CustomAuditorConfiguration {
 
 		@Bean
