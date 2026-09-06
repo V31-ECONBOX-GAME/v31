@@ -34,8 +34,9 @@ public final class RequestContext {
 
 	private static final Pattern ACCEPTED_VALUE = Pattern.compile("[\\x20-\\x7E]{1,256}");
 
-	private static final Set<String> CONNECTION_SPECIFIC = Set.of("connection", "proxy-connection", "keep-alive",
-			"transfer-encoding", "upgrade");
+	private static final Set<String> HOP_SPECIFIC = Set.of("connection", "proxy-connection", "keep-alive",
+			"transfer-encoding", "upgrade", "te", "host", "content-type", "content-length", "user-agent",
+			"accept-encoding");
 
 	private static final ThreadLocal<Map<String, String>> THREAD_LOCAL = new ThreadLocal<>();
 
@@ -69,7 +70,8 @@ public final class RequestContext {
 	}
 
 	static void put(Map<String, String> values, String name, String value) {
-		if (value != null && !CONNECTION_SPECIFIC.contains(name) && ACCEPTED_VALUE.matcher(value).matches()) {
+		if (value != null && !HOP_SPECIFIC.contains(name) && !name.startsWith("grpc-")
+				&& ACCEPTED_VALUE.matcher(value).matches()) {
 			values.put(name, value);
 		}
 	}

@@ -24,8 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import io.spring.javaformat.gradle.SpringJavaFormatPlugin;
-import io.spring.javaformat.gradle.tasks.CheckFormat;
-import io.spring.javaformat.gradle.tasks.Format;
+import io.spring.javaformat.gradle.tasks.FormatterTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
@@ -66,7 +65,6 @@ class JavaConventions {
 
 	private void configureSpringJavaFormat(Project project) {
 		project.getPluginManager().apply(SpringJavaFormatPlugin.class);
-		project.getTasks().withType(Format.class).configureEach((format) -> format.setEncoding("UTF-8"));
 		project.getPluginManager().apply(CheckstylePlugin.class);
 		CheckstyleExtension checkstyle = project.getExtensions().getByType(CheckstyleExtension.class);
 		Object toolVersion = project.findProperty(GradleProperties.CHECKSTYLE_TOOL_VERSION);
@@ -80,7 +78,7 @@ class JavaConventions {
 			.add(project.getDependencies().create("com.puppycrawl.tools:checkstyle:" + checkstyle.getToolVersion()));
 		checkstyleDependencies.add(
 				project.getDependencies().create("io.spring.javaformat:spring-javaformat-checkstyle:" + formatVersion));
-		project.getTasks().withType(CheckFormat.class).configureEach(this::excludeGeneratedSources);
+		project.getTasks().withType(FormatterTask.class).configureEach(this::excludeGeneratedSources);
 		project.getTasks().withType(Checkstyle.class).configureEach(this::excludeGeneratedSources);
 	}
 

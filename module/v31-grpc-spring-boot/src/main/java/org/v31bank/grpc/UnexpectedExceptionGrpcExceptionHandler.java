@@ -21,7 +21,6 @@ import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.grpc.server.exception.GrpcExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -32,7 +31,7 @@ import org.springframework.http.HttpStatus;
  * @author Xander Wang
  * @since 0.2.0
  */
-@Order(Ordered.LOWEST_PRECEDENCE)
+@Order
 public class UnexpectedExceptionGrpcExceptionHandler implements GrpcExceptionHandler {
 
 	private static final Log logger = LogFactory.getLog(UnexpectedExceptionGrpcExceptionHandler.class);

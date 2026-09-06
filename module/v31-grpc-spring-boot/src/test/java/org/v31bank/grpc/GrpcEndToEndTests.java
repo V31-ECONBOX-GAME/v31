@@ -187,13 +187,14 @@ class GrpcEndToEndTests {
 	}
 
 	@Test
-	void aConnectionSpecificHeaderIsNotCarried() {
+	void aHopSpecificHeaderIsNotCarried() {
 		java.util.Map<String, String> values = new java.util.HashMap<>();
 		for (String name : new String[] { "connection", "proxy-connection", "keep-alive", "transfer-encoding",
-				"upgrade" }) {
+				"upgrade", "te", "host", "content-type", "content-length", "user-agent", "accept-encoding",
+				"grpc-accept-encoding", "grpc-timeout" }) {
 			RequestContext.put(values, name, "close");
 		}
-		assertThat(values).as("HTTP/2 rejects the stream outright when one of these arrives as metadata").isEmpty();
+		assertThat(values).as("a header that describes this hop must not be copied onto the next one").isEmpty();
 	}
 
 	@Test

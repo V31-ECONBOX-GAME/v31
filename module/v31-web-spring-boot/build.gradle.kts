@@ -24,8 +24,6 @@ plugins {
 description = "V31 Web auto-configuration"
 
 dependencies {
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
     // The envelope every endpoint answers with, so this module is what makes the
     // contract in v31-core the one a failure is reported through too.
     api(project(":library:v31-core"))
