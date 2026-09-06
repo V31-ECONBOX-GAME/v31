@@ -19,9 +19,11 @@ package org.v31bank.customer;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,7 +70,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void createsACustomerAndSaysWhereItWent() {
-		Map<String, Object> body = this.client.post()
+		Map<String, Object> body = required(this.client.post()
 			.uri(PATH)
 			.body(Map.of("email", "ada@v31bank.org", "fullName", "Ada Lovelace"))
 			.exchange()
@@ -76,7 +78,7 @@ class CustomerApiIntegrationTests {
 			.isCreated()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody();
+			.getResponseBody());
 		assertThat(body).containsEntry("code", 200);
 		assertThat(data(body)).containsEntry("email", "ada@v31bank.org")
 			.containsEntry("fullName", "Ada Lovelace")
@@ -100,36 +102,36 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void reportsAnAbsentCustomerAsNotFound() {
-		Map<String, Object> body = this.client.get()
+		Map<String, Object> body = required(this.client.get()
 			.uri(PATH + "/" + ABSENT_ID)
 			.exchange()
 			.expectStatus()
 			.isNotFound()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody();
+			.getResponseBody());
 		assertThat(body).containsEntry("code", 404);
 	}
 
 	@Test
 	void pagesNewestFirstAndCountsThemAll() {
-		createMany(25);
+		createMany();
 		Map<String, Object> page = get(PATH + "?pageNumber=1&pageSize=10");
 		assertThat(page).containsEntry("total", 25);
 		assertThat(records(page)).hasSize(10);
-		assertThat(records(page).get(0)).containsEntry("email", "customer25@v31bank.org");
+		assertThat(records(page).getFirst()).containsEntry("email", "customer25@v31bank.org");
 	}
 
 	@Test
 	void reportsTheLastPageAsTheLastOne() {
-		createMany(25);
+		createMany();
 		Map<String, Object> page = get(PATH + "?pageNumber=3&pageSize=10");
 		assertThat(records(page)).hasSize(5);
 	}
 
 	@Test
 	void doesNotRepeatOrDropARecordAcrossPages() {
-		createMany(25);
+		createMany();
 		Set<Object> seen = new HashSet<>();
 		for (int page = 1; page <= 3; page++) {
 			records(get(PATH + "?pageNumber=" + page + "&pageSize=10")).forEach((record) -> seen.add(record.get("id")));
@@ -186,7 +188,7 @@ class CustomerApiIntegrationTests {
 	}
 
 	private Map<String, Object> create(String email, String fullName) {
-		return data(this.client.post()
+		return data(required(this.client.post()
 			.uri(PATH)
 			.body(Map.of("email", email, "fullName", fullName))
 			.exchange()
@@ -194,39 +196,43 @@ class CustomerApiIntegrationTests {
 			.isCreated()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody());
+			.getResponseBody()));
 	}
 
-	private void createMany(int count) {
-		for (int i = 1; i <= count; i++) {
+	private void createMany() {
+		for (int i = 1; i <= 25; i++) {
 			create("customer%d@v31bank.org".formatted(i), "Customer " + i);
 		}
 	}
 
 	private Map<String, Object> get(String uri) {
-		return this.client.get()
+		return required(this.client.get()
 			.uri(uri)
 			.exchange()
 			.expectStatus()
 			.isOk()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody();
+			.getResponseBody());
+	}
+
+	private static <T> T required(@Nullable T value) {
+		return Objects.requireNonNull(value, "response body");
 	}
 
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> data(Map<String, ?> envelope) {
-		return (Map<String, Object>) envelope.get("data");
+		return required((Map<String, Object>) envelope.get("data"));
 	}
 
 	@SuppressWarnings("unchecked")
 	private static List<Map<String, Object>> records(Map<String, ?> envelope) {
-		return (List<Map<String, Object>>) envelope.get("data");
+		return required((List<Map<String, Object>>) envelope.get("data"));
 	}
 
 	@Test
 	void rejectsAnEmptyBody() {
-		Map<String, Object> body = this.client.post()
+		Map<String, Object> body = required(this.client.post()
 			.uri(PATH)
 			.body(Map.of())
 			.exchange()
@@ -234,13 +240,13 @@ class CustomerApiIntegrationTests {
 			.isBadRequest()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody();
+			.getResponseBody());
 		assertThat(body).containsEntry("code", 400);
 	}
 
 	@Test
 	void rejectsAValueLongerThanTheColumnHolds() {
-		Map<String, Object> body = this.client.post()
+		Map<String, Object> body = required(this.client.post()
 			.uri(PATH)
 			.body(Map.of("email", "ada@v31bank.org", "fullName", TOO_LONG))
 			.exchange()
@@ -248,13 +254,13 @@ class CustomerApiIntegrationTests {
 			.isBadRequest()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody();
+			.getResponseBody());
 		assertThat(body).containsEntry("code", 400);
 	}
 
 	@Test
 	void reportsAFrameworkRejectionInTheSameEnvelope() {
-		Map<String, Object> body = this.client.post()
+		Map<String, Object> body = required(this.client.post()
 			.uri(PATH)
 			.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
 			.body("not json at all")
@@ -263,7 +269,7 @@ class CustomerApiIntegrationTests {
 			.isBadRequest()
 			.expectBody(JSON_OBJECT)
 			.returnResult()
-			.getResponseBody();
+			.getResponseBody());
 		assertThat(body).containsEntry("code", 400)
 			.doesNotContainKeys("succeeded", "violations", "timestamp", "traceId");
 	}
