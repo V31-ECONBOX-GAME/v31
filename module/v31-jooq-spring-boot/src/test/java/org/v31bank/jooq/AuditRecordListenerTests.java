@@ -90,14 +90,6 @@ class AuditRecordListenerTests {
 	}
 
 	@Test
-	void leavesTheIdentifierAloneWhenTheDatabaseIssuesIt() {
-		Record record = auditedRecord();
-		listener(() -> Optional.of("xander"), false).stampCreation(record);
-		assertThat(record.get(ID)).isNull();
-		assertThat(record.get(CREATED_DATE)).isEqualTo(NOW);
-	}
-
-	@Test
 	void touchesOnlyTheModificationColumnsOnUpdate() {
 		Record record = auditedRecord();
 		this.listener.stampModification(record);
@@ -138,11 +130,7 @@ class AuditRecordListenerTests {
 	}
 
 	private AuditRecordListener listener(AuditorSupplier auditorSupplier) {
-		return listener(auditorSupplier, true);
-	}
-
-	private AuditRecordListener listener(AuditorSupplier auditorSupplier, boolean assignIdentifiers) {
-		return new AuditRecordListener(auditorSupplier, Clock.fixed(NOW, ZoneOffset.UTC), assignIdentifiers);
+		return new AuditRecordListener(auditorSupplier, Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 }

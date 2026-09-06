@@ -61,14 +61,6 @@ class V31JooqAutoConfigurationTests {
 	}
 
 	@Test
-	void addsNothingWhenAuditingIsTurnedOff() {
-		this.runner.withPropertyValues("v31.jooq.auditing.enabled=false").run((context) -> {
-			assertThat(context).doesNotHaveBean(AuditRecordListener.class);
-			assertThat(context).doesNotHaveBean(DefaultConfigurationCustomizer.class);
-		});
-	}
-
-	@Test
 	void attachesTheListenerToTheJooqConfiguration() {
 		this.runner.run((context) -> {
 			DefaultConfiguration configuration = new DefaultConfiguration();

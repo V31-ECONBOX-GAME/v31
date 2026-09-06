@@ -27,7 +27,7 @@ import org.v31bank.core.HttpResponse;
 import org.v31bank.core.PageQuery;
 
 /**
- * Runs a jOOQ query one page at a time.
+ * jOOQ paging.
  *
  * @author Xander Wang
  * @since 0.2.0

@@ -22,10 +22,8 @@ import java.util.Optional;
 import org.jooq.DSLContext;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jooq.autoconfigure.DefaultConfigurationCustomizer;
 import org.springframework.boot.jooq.autoconfigure.JooqAutoConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -41,16 +39,12 @@ import org.v31bank.jooq.AuditRecordListener;
  */
 @AutoConfiguration(before = JooqAutoConfiguration.class)
 @ConditionalOnClass({ DSLContext.class, DefaultConfigurationCustomizer.class })
-@ConditionalOnBooleanProperty(name = "v31.jooq.auditing.enabled", matchIfMissing = true)
-@EnableConfigurationProperties(V31JooqProperties.class)
 public class V31JooqAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	public AuditRecordListener auditRecordListener(ObjectProvider<AuditorSupplier> auditor,
-			V31JooqProperties properties) {
-		return new AuditRecordListener(auditor.getIfAvailable(() -> Optional::empty), Clock.systemUTC(),
-				properties.getIdentifiers().isEnabled());
+	public AuditRecordListener auditRecordListener(ObjectProvider<AuditorSupplier> auditor) {
+		return new AuditRecordListener(auditor.getIfAvailable(() -> Optional::empty), Clock.systemUTC());
 	}
 
 	@Bean

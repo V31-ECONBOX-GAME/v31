@@ -29,7 +29,7 @@ import org.v31bank.core.AuditorSupplier;
 import org.v31bank.core.Uuids;
 
 /**
- * Stamps the identifier and audit columns as records are written.
+ * Stamps audit columns on write.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -40,12 +40,9 @@ public class AuditRecordListener implements RecordListener {
 
 	private final Clock clock;
 
-	private final boolean assignIdentifiers;
-
-	public AuditRecordListener(AuditorSupplier auditorSupplier, Clock clock, boolean assignIdentifiers) {
+	public AuditRecordListener(AuditorSupplier auditorSupplier, Clock clock) {
 		this.auditorSupplier = auditorSupplier;
 		this.clock = clock;
-		this.assignIdentifiers = assignIdentifiers;
 	}
 
 	@Override
@@ -61,11 +58,9 @@ public class AuditRecordListener implements RecordListener {
 	void stampCreation(Record record) {
 		Instant now = Instant.now(this.clock);
 		String auditor = currentAuditor();
-		if (this.assignIdentifiers) {
-			Field<UUID> id = record.field(AuditColumns.ID, UUID.class);
-			if (id != null && record.get(id) == null) {
-				record.set(id, Uuids.timeOrdered());
-			}
+		Field<UUID> id = record.field(AuditColumns.ID, UUID.class);
+		if (id != null && record.get(id) == null) {
+			record.set(id, Uuids.timeOrdered());
 		}
 		stamp(record, AuditColumns.CREATED_BY, String.class, auditor);
 		stamp(record, AuditColumns.CREATED_DATE, Instant.class, now);

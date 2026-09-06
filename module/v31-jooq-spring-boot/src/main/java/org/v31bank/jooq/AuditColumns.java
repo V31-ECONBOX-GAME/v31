@@ -17,7 +17,7 @@
 package org.v31bank.jooq;
 
 /**
- * Names of the columns {@link AuditRecordListener} maintains.
+ * Audit column names.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -30,22 +30,22 @@ public final class AuditColumns {
 	public static final String ID = "id";
 
 	/**
-	 * Who inserted the row.
+	 * Who inserted.
 	 */
 	public static final String CREATED_BY = "created_by";
 
 	/**
-	 * When the row was inserted.
+	 * When inserted.
 	 */
 	public static final String CREATED_DATE = "created_date";
 
 	/**
-	 * Who last changed the row.
+	 * Who last changed.
 	 */
 	public static final String LAST_MODIFIED_BY = "last_modified_by";
 
 	/**
-	 * When the row was last changed.
+	 * When last changed.
 	 */
 	public static final String LAST_MODIFIED_DATE = "last_modified_date";
 

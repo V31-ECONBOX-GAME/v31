@@ -17,7 +17,6 @@
 plugins {
     `java-library`
     id("org.v31bank.auto-configuration")
-    id("org.v31bank.configuration-properties")
     id("org.v31bank.optional-dependencies")
 }
 
@@ -29,14 +28,11 @@ dependencies {
 
     optional("org.springframework.boot:spring-boot-autoconfigure")
 
-    // Not referenced in code: javac reads the JAXB annotations on
-    // `org.jooq.conf.Settings` when resolving the `DefaultConfiguration.set(...)`
-    // the tests call, and jOOQ leaves that API optional so it never arrives
-    // transitively. An enum constant whose type is absent is a warning, fatal
-    // under -Werror. Test compile only: nothing here binds XML at runtime.
-    testCompileOnly("jakarta.xml.bind:jakarta.xml.bind-api")
-
     testImplementation("org.springframework.boot:spring-boot-test")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")
+
+	// -Werror: javac warns on jOOQ Settings' JAXB annotations without it.
+	testCompileOnly("jakarta.xml.bind:jakarta.xml.bind-api")
+	testRuntimeOnly("ch.qos.logback:logback-classic")
 }
