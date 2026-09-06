@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Xander Wang
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(PostgresContainerConfiguration.class)
 class CustomerApiIntegrationTests {
 
 	private static final String PATH = "/api/v1/customers";

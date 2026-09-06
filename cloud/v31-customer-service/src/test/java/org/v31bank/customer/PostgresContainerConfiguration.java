@@ -14,16 +14,25 @@
  * limitations under the License.
  */
 
-plugins {
-    id("org.v31bank.flyway")
-	id("org.springframework.boot")
-}
+package org.v31bank.customer;
 
-dependencies {
-    implementation(project(":starter:v31-web-spring-boot-starter"))
-    implementation(project(":starter:v31-data-jpa-spring-boot-starter"))
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.boot:spring-boot-testcontainers")
-    testImplementation("org.testcontainers:testcontainers-postgresql")
+/**
+ * A throwaway PostgreSQL for the integration tests.
+ *
+ * @author Xander Wang
+ */
+@TestConfiguration(proxyBeanMethods = false)
+class PostgresContainerConfiguration {
+
+	@Bean
+	@ServiceConnection
+	PostgreSQLContainer postgresContainer() {
+		return new PostgreSQLContainer("postgres:18-alpine");
+	}
+
 }

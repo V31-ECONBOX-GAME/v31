@@ -2,22 +2,12 @@ spring:
   application:
     name: v31-customer-service
   jackson:
-    # HttpResponse leaves the members it is not using unset: without this a failure
-    # carries an empty payload and a success carries empty error fields.
     default-property-inclusion: non_null
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: wangxiang
     password: ""
   flyway:
-    # Every service shares one database, so each one owns a schema. Without this
-    # they would share `public` and its single flyway_schema_history, and each
-    # would refuse to start on finding migrations it does not have locally.
-    #
-    # This service was here first and its tables were created in `public`. Moving
-    # them into this schema is a one-off operation, not a migration — Flyway
-    # cannot record a change to where its own history lives. See
-    # db/migration/README.md.
     schemas: customer
     default-schema: customer
     create-schemas: true
