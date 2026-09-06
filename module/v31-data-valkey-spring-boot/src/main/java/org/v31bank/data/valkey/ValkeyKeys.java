@@ -20,18 +20,14 @@ import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
- * Builds this application's keys, all under one prefix.
+ * Builds this application's keys under one prefix.
  *
  * @author Xander Wang
  * @since 0.2.0
  */
 public class ValkeyKeys {
 
-	/**
-	 * What separates the parts of a key. Colon by convention, and what every Valkey and
-	 * Redis browser expects when it renders keys as a tree.
-	 */
-	public static final String SEPARATOR = ":";
+	private static final String SEPARATOR = ":";
 
 	private final String prefix;
 
@@ -40,7 +36,6 @@ public class ValkeyKeys {
 	}
 
 	public String of(String... segments) {
-		Objects.requireNonNull(segments, "segments must not be null");
 		if (segments.length == 0) {
 			throw new IllegalArgumentException("A key needs at least one segment beyond the prefix");
 		}

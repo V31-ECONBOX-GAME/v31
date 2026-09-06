@@ -18,7 +18,6 @@ package org.v31bank.data.valkey.autoconfigure;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -32,19 +31,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("v31.data.valkey")
 public class V31ValkeyProperties {
 
-	private final Serialization serialization = new Serialization();
-
 	private final Cache cache = new Cache();
 
-	/**
-	 * Prefix every key this application writes begins with, keeping one service's keys
-	 * apart from another's on a shared instance.
-	 */
 	private String keyPrefix = "v31";
-
-	public Serialization getSerialization() {
-		return this.serialization;
-	}
 
 	public Cache getCache() {
 		return this.cache;
@@ -58,60 +47,22 @@ public class V31ValkeyProperties {
 		this.keyPrefix = keyPrefix;
 	}
 
-	/**
-	 * Serialization properties.
-	 */
-	public static class Serialization {
-
-		/**
-		 * Package prefixes a stored value may name as its own type. Anything else is
-		 * refused on read, which stops a tampered entry naming a class whose construction
-		 * does something. Widening this to {@code java} gives up the protection entirely.
-		 */
-		private List<String> trustedPackages = List.of("org.v31bank", "java.util", "java.time", "java.math");
-
-		public List<String> getTrustedPackages() {
-			return this.trustedPackages;
-		}
-
-		public void setTrustedPackages(List<String> trustedPackages) {
-			this.trustedPackages = trustedPackages;
-		}
-
-	}
-
-	/**
-	 * Cache properties.
-	 */
 	public static class Cache {
 
-		/**
-		 * Whether to configure Spring's cache abstraction against Valkey.
-		 */
 		private boolean enabled = true;
 
-		/**
-		 * How long an entry lives when its cache is not named below.
-		 */
 		private Duration defaultTtl = Duration.ofMinutes(10);
 
-		/**
-		 * How long an entry lives, per cache name. A cache not named here uses the
-		 * default.
-		 */
 		private Map<String, Duration> ttls = new LinkedHashMap<>();
 
-		/**
-		 * Whether a lookup that found nothing may be cached. On by default: without it,
-		 * repeated lookups of something absent reach the database every time.
-		 */
 		private boolean allowNullValues = true;
 
-		/**
-		 * Whether a failed cache read or write fails the call. Off by default, so an
-		 * unreachable Valkey costs latency rather than availability. A failed eviction is
-		 * always allowed out regardless.
-		 */
+		private Duration nullTtl = Duration.ofMinutes(1);
+
+		private double ttlJitter = 0.1;
+
+		private int clearBatchSize = 500;
+
 		private boolean failFast;
 
 		public boolean isEnabled() {
@@ -144,6 +95,30 @@ public class V31ValkeyProperties {
 
 		public void setAllowNullValues(boolean allowNullValues) {
 			this.allowNullValues = allowNullValues;
+		}
+
+		public Duration getNullTtl() {
+			return this.nullTtl;
+		}
+
+		public void setNullTtl(Duration nullTtl) {
+			this.nullTtl = nullTtl;
+		}
+
+		public double getTtlJitter() {
+			return this.ttlJitter;
+		}
+
+		public void setTtlJitter(double ttlJitter) {
+			this.ttlJitter = ttlJitter;
+		}
+
+		public int getClearBatchSize() {
+			return this.clearBatchSize;
+		}
+
+		public void setClearBatchSize(int clearBatchSize) {
+			this.clearBatchSize = clearBatchSize;
 		}
 
 		public boolean isFailFast() {

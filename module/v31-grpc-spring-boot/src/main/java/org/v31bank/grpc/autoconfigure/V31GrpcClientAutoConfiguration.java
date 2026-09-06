@@ -49,7 +49,7 @@ public class V31GrpcClientAutoConfiguration {
 	@ConditionalOnBooleanProperty(name = "v31.grpc.client.deadline.enabled", matchIfMissing = true)
 	public DefaultDeadlineSetupClientInterceptor defaultDeadlineSetupClientInterceptor(V31GrpcProperties properties) {
 		Duration duration = properties.getClient().getDeadline().getDuration();
-		if (duration == null || duration.isZero() || duration.isNegative()) {
+		if (duration == null || !duration.isPositive()) {
 			throw new IllegalStateException("v31.grpc.client.deadline.duration must be positive, but was " + duration
 					+ "; set v31.grpc.client.deadline.enabled to false to leave calls without a deadline");
 		}

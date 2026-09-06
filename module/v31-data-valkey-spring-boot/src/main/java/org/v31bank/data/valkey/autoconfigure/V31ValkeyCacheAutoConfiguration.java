@@ -18,7 +18,6 @@ package org.v31bank.data.valkey.autoconfigure;
 
 import java.time.Duration;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -28,16 +27,20 @@ import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCust
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.cache.BatchStrategies;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.cache.RedisCacheWriter;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import org.v31bank.data.valkey.ValkeyCacheErrorHandler;
+import org.v31bank.data.valkey.ValkeyCacheTtl;
 import org.v31bank.data.valkey.ValkeyCachingConfigurer;
 
 /**
- * {@link AutoConfiguration Auto-configuration} for caching through Valkey.
+ * Makes Spring's caching use Valkey.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -51,22 +54,27 @@ public class V31ValkeyCacheAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	public RedisCacheConfiguration valkeyCacheConfiguration(V31ValkeyProperties properties,
-			@Qualifier("valkeyValueSerializer") RedisSerializer<Object> valkeyValueSerializer) {
+			RedisSerializer<Object> valkeyValueSerializer) {
+		V31ValkeyProperties.Cache cache = properties.getCache();
 		RedisCacheConfiguration configuration = RedisCacheConfiguration.defaultCacheConfig()
 			.prefixCacheNameWith(properties.getKeyPrefix() + ":cache:")
-			.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
-			.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valkeyValueSerializer));
-		configuration = applyTtl(configuration, properties.getCache().getDefaultTtl());
-		return properties.getCache().isAllowNullValues() ? configuration : configuration.disableCachingNullValues();
+			.serializeKeysWith(SerializationPair.fromSerializer(RedisSerializer.string()))
+			.serializeValuesWith(SerializationPair.fromSerializer(valkeyValueSerializer))
+			.entryTtl(ttl(cache, cache.getDefaultTtl()));
+		return cache.isAllowNullValues() ? configuration : configuration.disableCachingNullValues();
 	}
 
 	@Bean
-	public RedisCacheManagerBuilderCustomizer valkeyCacheTtlCustomizer(V31ValkeyProperties properties,
-			RedisCacheConfiguration valkeyCacheConfiguration) {
-		return (builder) -> properties.getCache()
-			.getTtls()
-			.forEach((cacheName, ttl) -> builder.withCacheConfiguration(cacheName,
-					applyTtl(valkeyCacheConfiguration, ttl)));
+	public RedisCacheManagerBuilderCustomizer valkeyCacheManagerCustomizer(V31ValkeyProperties properties,
+			RedisCacheConfiguration valkeyCacheConfiguration, RedisConnectionFactory connectionFactory) {
+		V31ValkeyProperties.Cache cache = properties.getCache();
+		return (builder) -> {
+			builder.cacheWriter(RedisCacheWriter.create(connectionFactory,
+					(writer) -> writer.batchStrategy(BatchStrategies.scan(cache.getClearBatchSize()))));
+			cache.getTtls()
+				.forEach((cacheName, ttl) -> builder.withCacheConfiguration(cacheName,
+						valkeyCacheConfiguration.entryTtl(ttl(cache, ttl))));
+		};
 	}
 
 	@Bean
@@ -75,8 +83,8 @@ public class V31ValkeyCacheAutoConfiguration {
 		return new ValkeyCachingConfigurer(new ValkeyCacheErrorHandler(properties.getCache().isFailFast()));
 	}
 
-	private static RedisCacheConfiguration applyTtl(RedisCacheConfiguration configuration, Duration ttl) {
-		return (ttl != null && !ttl.isNegative() && !ttl.isZero()) ? configuration.entryTtl(ttl) : configuration;
+	private static ValkeyCacheTtl ttl(V31ValkeyProperties.Cache cache, Duration ttl) {
+		return new ValkeyCacheTtl(ttl, cache.getNullTtl(), cache.getTtlJitter());
 	}
 
 }

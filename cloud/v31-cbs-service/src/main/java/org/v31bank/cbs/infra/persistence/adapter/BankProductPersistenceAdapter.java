@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -57,10 +56,10 @@ public class BankProductPersistenceAdapter implements BankProductPort {
 
 	private final BankProductValkeyKeys keys;
 
-	public BankProductPersistenceAdapter(StringRedisTemplate valkey,
-			@Qualifier("valkeyValueSerializer") RedisSerializer<Object> serializer, BankProductValkeyKeys keys) {
+	public BankProductPersistenceAdapter(StringRedisTemplate valkey, RedisSerializer<Object> valkeyValueSerializer,
+			BankProductValkeyKeys keys) {
 		this.valkey = valkey;
-		this.serializer = serializer;
+		this.serializer = valkeyValueSerializer;
 		this.keys = keys;
 	}
 

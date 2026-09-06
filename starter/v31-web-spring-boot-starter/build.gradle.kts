@@ -21,7 +21,8 @@ plugins {
 description = "V31 Web starter"
 
 dependencies {
-    api(project(":module:v31-web-spring-boot"))
     api("org.springframework.boot:spring-boot-starter-webmvc")
     api("org.springframework.boot:spring-boot-starter-validation")
+
+	api(project(":module:v31-web-spring-boot"))
 }

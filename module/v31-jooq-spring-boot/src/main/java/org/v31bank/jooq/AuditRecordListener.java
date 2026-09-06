@@ -58,18 +58,14 @@ public class AuditRecordListener implements RecordListener {
 		stampModification(ctx.record());
 	}
 
-	@Override
-	public void mergeStart(RecordContext ctx) {
-		Record record = ctx.record();
-		stampCreationIfAbsent(record);
-		stampModification(record);
-	}
-
 	void stampCreation(Record record) {
 		Instant now = Instant.now(this.clock);
 		String auditor = currentAuditor();
 		if (this.assignIdentifiers) {
-			stampIfAbsent(record, AuditColumns.ID, UUID.class, Uuids.timeOrdered());
+			Field<UUID> id = record.field(AuditColumns.ID, UUID.class);
+			if (id != null && record.get(id) == null) {
+				record.set(id, Uuids.timeOrdered());
+			}
 		}
 		stamp(record, AuditColumns.CREATED_BY, String.class, auditor);
 		stamp(record, AuditColumns.CREATED_DATE, Instant.class, now);
@@ -82,14 +78,6 @@ public class AuditRecordListener implements RecordListener {
 		stamp(record, AuditColumns.LAST_MODIFIED_DATE, Instant.class, Instant.now(this.clock));
 	}
 
-	private void stampCreationIfAbsent(Record record) {
-		if (this.assignIdentifiers) {
-			stampIfAbsent(record, AuditColumns.ID, UUID.class, Uuids.timeOrdered());
-		}
-		stampIfAbsent(record, AuditColumns.CREATED_BY, String.class, currentAuditor());
-		stampIfAbsent(record, AuditColumns.CREATED_DATE, Instant.class, Instant.now(this.clock));
-	}
-
 	private String currentAuditor() {
 		return this.auditorSupplier.currentAuditor().orElse(null);
 	}
@@ -100,16 +88,6 @@ public class AuditRecordListener implements RecordListener {
 		}
 		Field<T> field = record.field(column, type);
 		if (field != null) {
-			record.set(field, value);
-		}
-	}
-
-	private static <T> void stampIfAbsent(Record record, String column, Class<T> type, T value) {
-		if (value == null) {
-			return;
-		}
-		Field<T> field = record.field(column, type);
-		if (field != null && record.get(field) == null) {
 			record.set(field, value);
 		}
 	}

@@ -16,7 +16,6 @@
 
 package org.v31bank.data.valkey.autoconfigure;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,8 +27,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 import org.v31bank.data.valkey.ValkeyKeys;
 import org.v31bank.data.valkey.ValkeyLock;
@@ -47,9 +44,9 @@ public class V31ValkeyAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(name = "valkeyValueSerializer")
-	public RedisSerializer<Object> valkeyValueSerializer(V31ValkeyProperties properties) {
+	public RedisSerializer<Object> valkeyValueSerializer() {
 		return GenericJacksonJsonRedisSerializer.builder()
-			.enableDefaultTyping(trustedTypes(properties))
+			.enableUnsafeDefaultTyping()
 			.enableSpringCacheNullValueSupport()
 			.build();
 	}
@@ -57,7 +54,7 @@ public class V31ValkeyAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean(name = "redisTemplate")
 	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory,
-			@Qualifier("valkeyValueSerializer") RedisSerializer<Object> valkeyValueSerializer) {
+			RedisSerializer<Object> valkeyValueSerializer) {
 		RedisTemplate<String, Object> template = new RedisTemplate<>();
 		template.setConnectionFactory(connectionFactory);
 		template.setKeySerializer(RedisSerializer.string());
@@ -77,14 +74,6 @@ public class V31ValkeyAutoConfiguration {
 	@ConditionalOnMissingBean
 	public ValkeyLock valkeyLock(StringRedisTemplate stringRedisTemplate) {
 		return new ValkeyLock(stringRedisTemplate);
-	}
-
-	private static PolymorphicTypeValidator trustedTypes(V31ValkeyProperties properties) {
-		BasicPolymorphicTypeValidator.Builder validator = BasicPolymorphicTypeValidator.builder();
-		for (String trustedPackage : properties.getSerialization().getTrustedPackages()) {
-			validator.allowIfSubType(trustedPackage);
-		}
-		return validator.build();
 	}
 
 }

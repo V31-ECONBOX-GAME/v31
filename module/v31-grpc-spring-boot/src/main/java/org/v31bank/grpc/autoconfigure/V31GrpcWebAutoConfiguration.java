@@ -22,7 +22,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProp
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 import org.v31bank.grpc.HeaderPropagationFilter;
@@ -37,13 +36,12 @@ import org.v31bank.grpc.HeaderPropagationFilter;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnClass({ Filter.class, HeaderPropagationFilter.class })
 @ConditionalOnBooleanProperty(name = "v31.grpc.propagation.enabled", matchIfMissing = true)
-@EnableConfigurationProperties(V31GrpcProperties.class)
 public class V31GrpcWebAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	public HeaderPropagationFilter headerPropagationFilter(V31GrpcProperties properties) {
-		return new HeaderPropagationFilter(properties.getPropagation().getHeaders());
+	public HeaderPropagationFilter headerPropagationFilter() {
+		return new HeaderPropagationFilter();
 	}
 
 }

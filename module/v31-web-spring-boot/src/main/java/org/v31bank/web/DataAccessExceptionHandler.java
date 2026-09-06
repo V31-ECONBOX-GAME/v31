@@ -44,16 +44,18 @@ public class DataAccessExceptionHandler {
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<HttpResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
 		logger.warn("Write refused by the database", ex);
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(HttpResponse.error(HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase()));
+		return conflict(HttpStatus.CONFLICT.getReasonPhrase());
 	}
 
 	@ExceptionHandler(OptimisticLockingFailureException.class)
 	public ResponseEntity<HttpResponse<Void>> handleOptimisticLockingFailure(OptimisticLockingFailureException ex) {
 		logger.debug("Concurrent modification", ex);
-		return ResponseEntity.status(HttpStatus.CONFLICT.value())
-			.body(HttpResponse.error(HttpStatus.CONFLICT.value(),
-					"The record changed while this request was in flight"));
+		return conflict("The record changed while this request was in flight");
+	}
+
+	private static ResponseEntity<HttpResponse<Void>> conflict(String message) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(HttpResponse.error(HttpStatus.CONFLICT.value(), message));
 	}
 
 }

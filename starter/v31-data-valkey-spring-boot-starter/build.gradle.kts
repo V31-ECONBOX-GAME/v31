@@ -21,6 +21,7 @@ plugins {
 description = "V31 Data Valkey starter"
 
 dependencies {
-    api(project(":module:v31-data-valkey-spring-boot"))
     api("org.springframework.boot:spring-boot-starter-data-redis")
+
+	api(project(":module:v31-data-valkey-spring-boot"))
 }

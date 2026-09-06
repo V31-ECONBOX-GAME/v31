@@ -54,7 +54,6 @@ class V31GrpcSmokeTests {
 
 	@Test
 	void applicationPropertiesAreBound() {
-		assertThat(this.properties.getPropagation().getHeaders()).containsExactly("x-tenant-id", "x-channel");
 		assertThat(this.properties.getClient().getDeadline().getDuration()).isEqualTo(Duration.ofSeconds(3));
 	}
 

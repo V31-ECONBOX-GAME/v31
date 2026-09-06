@@ -19,9 +19,12 @@ package org.v31bank.data.valkey.autoconfigure;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -32,12 +35,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisKeyCommands;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import org.v31bank.data.valkey.ValkeyCacheErrorHandler;
@@ -45,9 +52,12 @@ import org.v31bank.data.valkey.ValkeyKeys;
 import org.v31bank.data.valkey.ValkeyLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 
 /**
  * Tests for {@link V31ValkeyAutoConfiguration} and
@@ -98,7 +108,7 @@ class V31ValkeyAutoConfigurationTests {
 	}
 
 	@Test
-	void readsBackAValueOfATrustedType() {
+	void readsBackAValueAsTheTypeItWasStoredAs() {
 		this.runner.run((context) -> {
 			RedisSerializer<Object> serializer = serializer(context.getBean(RedisSerializer.class));
 			byte[] written = serializer.serialize(new Balance("USD", "1.25"));
@@ -131,16 +141,6 @@ class V31ValkeyAutoConfigurationTests {
 	}
 
 	@Test
-	void refusesToReadBackAValueOfAnUntrustedType() {
-		this.runner.run((context) -> {
-			byte[] written = serializer(context.getBean(RedisSerializer.class)).serialize(new Balance("USD", "1.25"));
-			RedisSerializer<Object> restricted = new V31ValkeyAutoConfiguration()
-				.valkeyValueSerializer(propertiesTrusting("org.v31bank.nothing.at.all"));
-			assertThatExceptionOfType(SerializationException.class).isThrownBy(() -> restricted.deserialize(written));
-		});
-	}
-
-	@Test
 	void backsOffFromAnApplicationSuppliedTemplate() {
 		this.runner.withUserConfiguration(CustomTemplateConfiguration.class)
 			.run((context) -> assertThat(context.getBean("redisTemplate"))
@@ -153,44 +153,86 @@ class V31ValkeyAutoConfigurationTests {
 		this.runner.run((context) -> {
 			RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
 			assertThat(configuration.getKeyPrefixFor("customers")).startsWith("v31:cache:");
-			assertThat(configuration.getTtlFunction().getTimeToLive(Object.class, null))
-				.isEqualTo(Duration.ofMinutes(10));
+			assertThat(configuration.getTtlFunction().getTimeToLive("7", "Ada")).isBetween(Duration.ofMinutes(10),
+					Duration.ofMinutes(11));
 		});
 	}
 
 	@Test
 	void appliesTheConfiguredDefaultExpiry() {
-		this.runner.withPropertyValues("v31.data.valkey.cache.default-ttl=30s")
+		this.runner.withPropertyValues("v31.data.valkey.cache.default-ttl=30s", "v31.data.valkey.cache.ttl-jitter=0")
 			.run((context) -> assertThat(
-					context.getBean(RedisCacheConfiguration.class).getTtlFunction().getTimeToLive(Object.class, null))
+					context.getBean(RedisCacheConfiguration.class).getTtlFunction().getTimeToLive("7", "Ada"))
 				.isEqualTo(Duration.ofSeconds(30)));
 	}
 
 	@Test
-	void cachesMissesUnlessToldNotTo() {
-		this.runner
-			.run((context) -> assertThat(context.getBean(RedisCacheConfiguration.class).getAllowCacheNullValues())
-				.isTrue());
-		this.runner.withPropertyValues("v31.data.valkey.cache.allow-null-values=false")
-			.run((context) -> assertThat(context.getBean(RedisCacheConfiguration.class).getAllowCacheNullValues())
-				.isFalse());
+	void spreadsExpiryRatherThanLettingAWholeCacheFallDueAtOnce() {
+		this.runner.run((context) -> {
+			RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+			assertThat(IntStream.range(0, 200)
+				.mapToObj((index) -> configuration.getTtlFunction().getTimeToLive("7", "Ada"))
+				.collect(Collectors.toSet())).hasSizeGreaterThan(50);
+		});
 	}
 
 	@Test
-	void addsNoCachingWhenItIsTurnedOff() {
-		this.runner.withPropertyValues("v31.data.valkey.cache.enabled=false")
-			.run((context) -> assertThat(context).doesNotHaveBean(RedisCacheConfiguration.class));
+	void expiresAMissSoonerThanAValue() {
+		this.runner.withPropertyValues("v31.data.valkey.cache.ttl-jitter=0").run((context) -> {
+			RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+			assertThat(configuration.getTtlFunction().getTimeToLive("7", null)).isEqualTo(Duration.ofMinutes(1));
+			assertThat(configuration.getTtlFunction().getTimeToLive("7", "Ada")).isEqualTo(Duration.ofMinutes(10));
+		});
+	}
+
+	@Test
+	void appliesAPerCacheExpiry() {
+		V31ValkeyProperties properties = new V31ValkeyProperties();
+		properties.getCache().setTtls(Map.of("rates", Duration.ofSeconds(30)));
+		properties.getCache().setTtlJitter(0);
+
+		RedisCacheManager cacheManager = cacheManager(properties, mock(RedisConnectionFactory.class));
+
+		assertThat(cacheManager.getCacheConfigurations().get("rates").getTtlFunction().getTimeToLive("USD", "1.25"))
+			.isEqualTo(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void clearsACacheByScanningRatherThanByAskingForEveryKeyAtOnce() {
+		RedisKeyCommands keyCommands = mock(RedisKeyCommands.class);
+		RedisConnection connection = mock(RedisConnection.class);
+		Cursor<byte[]> cursor = mock();
+		given(connection.keyCommands()).willReturn(keyCommands);
+		given(keyCommands.scan(any(ScanOptions.class))).willReturn(cursor);
+		RedisConnectionFactory connectionFactory = mock(RedisConnectionFactory.class);
+		given(connectionFactory.getConnection()).willReturn(connection);
+		V31ValkeyProperties properties = new V31ValkeyProperties();
+		properties.getCache().setClearBatchSize(64);
+
+		cacheManager(properties, connectionFactory).getCache("customers").invalidate();
+
+		ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
+		then(keyCommands).should().scan(options.capture());
+		then(keyCommands).should(never()).keys(any());
+		assertThat(options.getValue().getCount()).isEqualTo(64L);
+	}
+
+	private static RedisCacheManager cacheManager(V31ValkeyProperties properties,
+			RedisConnectionFactory connectionFactory) {
+		V31ValkeyCacheAutoConfiguration autoConfiguration = new V31ValkeyCacheAutoConfiguration();
+		RedisCacheConfiguration configuration = autoConfiguration.valkeyCacheConfiguration(properties,
+				RedisSerializer.java());
+		RedisCacheManager.RedisCacheManagerBuilder builder = RedisCacheManager.builder(connectionFactory)
+			.cacheDefaults(configuration);
+		autoConfiguration.valkeyCacheManagerCustomizer(properties, configuration, connectionFactory).customize(builder);
+		RedisCacheManager cacheManager = builder.build();
+		cacheManager.afterPropertiesSet();
+		return cacheManager;
 	}
 
 	@SuppressWarnings("unchecked")
 	private static RedisSerializer<Object> serializer(RedisSerializer<?> serializer) {
 		return (RedisSerializer<Object>) serializer;
-	}
-
-	private static V31ValkeyProperties propertiesTrusting(String... packages) {
-		V31ValkeyProperties properties = new V31ValkeyProperties();
-		properties.getSerialization().setTrustedPackages(List.of(packages));
-		return properties;
 	}
 
 	public record Balance(String asset, String amount) {

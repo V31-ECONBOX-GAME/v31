@@ -17,8 +17,6 @@
 package org.v31bank.grpc.autoconfigure;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -49,23 +47,12 @@ public class V31GrpcProperties {
 		return this.client;
 	}
 
-	/**
-	 * What travels with a request from one service to the next.
-	 */
 	public static class Propagation {
 
 		/**
-		 * Whether to carry a request's context onward, into the calls made while serving
-		 * it.
+		 * Whether to carry a request's context onward.
 		 */
 		private boolean enabled = true;
-
-		/**
-		 * Header names carried onward, lower case as gRPC requires. Nothing secret
-		 * belongs here: every name listed is copied onto every outgoing call, to every
-		 * service reached.
-		 */
-		private List<String> headers = new ArrayList<>();
 
 		public boolean isEnabled() {
 			return this.enabled;
@@ -75,19 +62,8 @@ public class V31GrpcProperties {
 			this.enabled = enabled;
 		}
 
-		public List<String> getHeaders() {
-			return this.headers;
-		}
-
-		public void setHeaders(List<String> headers) {
-			this.headers = headers;
-		}
-
 	}
 
-	/**
-	 * Properties for calls this service serves.
-	 */
 	public static class Server {
 
 		private final ExceptionHandling exceptionHandling = new ExceptionHandling();
@@ -96,14 +72,10 @@ public class V31GrpcProperties {
 			return this.exceptionHandling;
 		}
 
-		/**
-		 * Exception handling properties.
-		 */
 		public static class ExceptionHandling {
 
 			/**
-			 * Whether to report a refused call with the platform's error code, and keep
-			 * an unexpected failure's message off the wire.
+			 * Whether to keep an unexpected failure's message off the wire.
 			 */
 			private boolean enabled = true;
 
@@ -119,9 +91,6 @@ public class V31GrpcProperties {
 
 	}
 
-	/**
-	 * Properties for calls this service makes.
-	 */
 	public static class Client {
 
 		private final Deadline deadline = new Deadline();
@@ -132,22 +101,15 @@ public class V31GrpcProperties {
 
 	}
 
-	/**
-	 * Deadline properties.
-	 */
 	public static class Deadline {
 
 		/**
-		 * Whether a call that set no deadline is given one. Turning it off lets a call
-		 * wait until the connection breaks, which should be a deliberate decision.
+		 * Whether a call that set no deadline is given one.
 		 */
 		private boolean enabled = true;
 
 		/**
-		 * How long a call may run before it is given up on. gRPC applies none of its own,
-		 * so a call to a service answering nothing holds the caller's thread until the
-		 * connection breaks — under load, how one unhealthy service exhausts the pools in
-		 * front of it. Must be positive, checked at startup.
+		 * How long a call may run before it is given up on. Must be positive.
 		 */
 		private Duration duration = Duration.ofSeconds(5);
 

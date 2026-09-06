@@ -16,7 +16,6 @@
 
 package org.v31bank.grpc;
 
-import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.grpc.StatusRuntimeException;
@@ -24,7 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Turns a failed call back into the exception the far side threw.
+ * Reports a failed gRPC call as a server error, telling the caller nothing more.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -35,7 +34,6 @@ public final class GrpcErrors {
 	}
 
 	public static <T> T call(Supplier<T> call) {
-		Objects.requireNonNull(call, "call must not be null");
 		try {
 			return call.get();
 		}
@@ -45,7 +43,6 @@ public final class GrpcErrors {
 	}
 
 	public static ResponseStatusException asResponseStatusException(StatusRuntimeException exception) {
-		Objects.requireNonNull(exception, "exception must not be null");
 		return new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
 				HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), exception);
 	}

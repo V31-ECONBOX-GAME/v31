@@ -25,17 +25,8 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
  * @author Xander Wang
  * @since 0.2.0
  */
-public class ValkeyCachingConfigurer implements CachingConfigurer {
+public record ValkeyCachingConfigurer(
+		CacheErrorHandler errorHandler) implements CachingConfigurer {
 
-	private final CacheErrorHandler errorHandler;
-
-	public ValkeyCachingConfigurer(CacheErrorHandler errorHandler) {
-		this.errorHandler = errorHandler;
-	}
-
-	@Override
-	public CacheErrorHandler errorHandler() {
-		return this.errorHandler;
-	}
 
 }

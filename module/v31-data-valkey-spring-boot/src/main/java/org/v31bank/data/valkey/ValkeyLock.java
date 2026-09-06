@@ -36,10 +36,6 @@ import org.v31bank.core.Uuids;
  */
 public class ValkeyLock {
 
-	/**
-	 * Deletes the key only if it still carries the token the caller was given. Returns
-	 * the number of keys deleted, so nothing is 0 and success is 1.
-	 */
 	private static final RedisScript<Long> RELEASE = new DefaultRedisScript<>("""
 			if redis.call('get', KEYS[1]) == ARGV[1] then
 			    return redis.call('del', KEYS[1])
@@ -48,9 +44,6 @@ public class ValkeyLock {
 			end
 			""", Long.class);
 
-	/**
-	 * Pushes the expiry out, again only if the key still carries the caller's token.
-	 */
 	private static final RedisScript<Long> EXTEND = new DefaultRedisScript<>("""
 			if redis.call('get', KEYS[1]) == ARGV[1] then
 			    return redis.call('pexpire', KEYS[1], ARGV[2])
@@ -66,36 +59,22 @@ public class ValkeyLock {
 	}
 
 	public Optional<String> acquire(String key, Duration lease) {
-		Objects.requireNonNull(key, "key must not be null");
-		Objects.requireNonNull(lease, "lease must not be null");
-		if (lease.isNegative() || lease.isZero()) {
-			throw new IllegalArgumentException("A lease must be positive, or the lock expires before it is used");
-		}
+		requireLease(lease);
 		String token = Uuids.timeOrdered().toString();
 		return Boolean.TRUE.equals(this.template.opsForValue().setIfAbsent(key, token, lease)) ? Optional.of(token)
 				: Optional.empty();
 	}
 
 	public boolean release(String key, String token) {
-		Objects.requireNonNull(key, "key must not be null");
-		Objects.requireNonNull(token, "token must not be null");
-		Long released = this.template.execute(RELEASE, List.of(key), token);
-		return released != null && released > 0;
+		return ran(RELEASE, key, token);
 	}
 
 	public boolean extend(String key, String token, Duration lease) {
-		Objects.requireNonNull(key, "key must not be null");
-		Objects.requireNonNull(token, "token must not be null");
-		Objects.requireNonNull(lease, "lease must not be null");
-		if (lease.isNegative() || lease.isZero()) {
-			throw new IllegalArgumentException("A lease must be positive, or the lock expires before it is used");
-		}
-		Long extended = this.template.execute(EXTEND, List.of(key), token, Long.toString(lease.toMillis()));
-		return extended != null && extended > 0;
+		requireLease(lease);
+		return ran(EXTEND, key, token, Long.toString(lease.toMillis()));
 	}
 
 	public <T> Optional<T> runExclusively(String key, Duration lease, Supplier<T> action) {
-		Objects.requireNonNull(action, "action must not be null");
 		Optional<String> token = acquire(key, lease);
 		if (token.isEmpty()) {
 			return Optional.empty();
@@ -105,6 +84,17 @@ public class ValkeyLock {
 		}
 		finally {
 			release(key, token.get());
+		}
+	}
+
+	private boolean ran(RedisScript<Long> script, String key, String... args) {
+		Long changed = this.template.execute(script, List.of(key), (Object[]) args);
+		return changed != null && changed > 0;
+	}
+
+	private static void requireLease(Duration lease) {
+		if (!lease.isPositive()) {
+			throw new IllegalArgumentException("A lease must be positive, or the lock expires before it is used");
 		}
 	}
 

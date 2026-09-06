@@ -21,6 +21,7 @@ plugins {
 description = "V31 jOOQ starter"
 
 dependencies {
-    api(project(":module:v31-jooq-spring-boot"))
     api("org.springframework.boot:spring-boot-starter-jooq")
+
+	api(project(":module:v31-jooq-spring-boot"))
 }

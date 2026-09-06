@@ -16,8 +16,7 @@
 
 package org.v31bank.grpc;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import io.grpc.Context;
@@ -28,27 +27,21 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 
 /**
- * Reads the propagated headers off an arriving call.
+ * Reads every header off an arriving call.
  *
  * @author Xander Wang
  * @since 0.2.0
  */
 public class HeaderPropagationServerInterceptor implements ServerInterceptor {
 
-	private final List<Metadata.Key<String>> propagated;
-
-	public HeaderPropagationServerInterceptor(Collection<String> propagatedHeaders) {
-		this.propagated = propagatedHeaders.stream()
-			.map((name) -> Metadata.Key.of(name, Metadata.ASCII_STRING_MARSHALLER))
-			.toList();
-	}
-
 	@Override
 	public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call, Metadata headers,
 			ServerCallHandler<ReqT, RespT> next) {
-		Map<String, String> values = RequestContext.newValues();
-		for (Metadata.Key<String> key : this.propagated) {
-			RequestContext.put(values, key.originalName(), headers.get(key));
+		Map<String, String> values = new HashMap<>();
+		for (String name : headers.keys()) {
+			if (!name.endsWith(Metadata.BINARY_HEADER_SUFFIX)) {
+				RequestContext.put(values, name, headers.get(Metadata.Key.of(name, Metadata.ASCII_STRING_MARSHALLER)));
+			}
 		}
 		Context context = Context.current().withValue(RequestContext.CONTEXT_KEY, Map.copyOf(values));
 		return Contexts.interceptCall(context, call, headers, next);

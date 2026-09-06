@@ -65,7 +65,11 @@ class GrpcEndToEndTests {
 
 	private static final String ECHO_TENANT = "echo-tenant";
 
+	private static final String ECHO_OTHER = "echo-other";
+
 	private static final String TENANT_HEADER = "x-tenant-id";
+
+	private static final String OTHER_HEADER = "x-not-configured";
 
 	private static final String FAIL_BUSINESS = "fail-business";
 
@@ -165,22 +169,31 @@ class GrpcEndToEndTests {
 	}
 
 	@Test
-	void aHeaderNobodyAskedToPropagateDoesNotTravel() throws IOException {
+	void everyHeaderTravels() throws IOException {
 		Channel client = start(Duration.ZERO);
-		try (RequestContext.Scope scope = RequestContext.attach(java.util.Map.of("x-not-configured", "leaked"))) {
-			assertThat(call(client, ECHO_TENANT))
-				.as("only what was configured is carried, so nothing rides along by accident")
-				.isEqualTo("null");
+		try (RequestContext.Scope scope = RequestContext.attach(java.util.Map.of(OTHER_HEADER, "carried"))) {
+			assertThat(call(client, ECHO_OTHER)).as("nothing is filtered out, so any header reaches the far side")
+				.isEqualTo("carried");
 		}
 	}
 
 	@Test
 	void aForgedHeaderValueIsNotCarried() throws IOException {
 		Channel client = start(Duration.ZERO);
-		java.util.Map<String, String> values = RequestContext.newValues();
+		java.util.Map<String, String> values = new java.util.HashMap<>();
 		RequestContext.put(values, TENANT_HEADER, "acme\nX-Injected: yes");
 		assertThat(values).as("a value that could terminate a header or forge a log line is refused before it travels")
 			.doesNotContainKey(TENANT_HEADER);
+	}
+
+	@Test
+	void aConnectionSpecificHeaderIsNotCarried() {
+		java.util.Map<String, String> values = new java.util.HashMap<>();
+		for (String name : new String[] { "connection", "proxy-connection", "keep-alive", "transfer-encoding",
+				"upgrade" }) {
+			RequestContext.put(values, name, "close");
+		}
+		assertThat(values).as("HTTP/2 rejects the stream outright when one of these arrives as metadata").isEmpty();
 	}
 
 	@Test
@@ -207,8 +220,8 @@ class GrpcEndToEndTests {
 				new CompositeGrpcExceptionHandler(new RefusalGrpcExceptionHandler(),
 						new UnexpectedExceptionGrpcExceptionHandler()));
 		this.server = InProcessServerBuilder.forName(name)
-			.addService(ServerInterceptors.intercept(probeService(), exceptions,
-					new HeaderPropagationServerInterceptor(List.of(TENANT_HEADER))))
+			.addService(
+					ServerInterceptors.intercept(probeService(), exceptions, new HeaderPropagationServerInterceptor()))
 			.build()
 			.start();
 		this.channel = InProcessChannelBuilder.forName(name).build();
@@ -224,6 +237,10 @@ class GrpcEndToEndTests {
 				switch (request) {
 					case ECHO_TENANT -> {
 						observer.onNext(String.valueOf(RequestContext.get(TENANT_HEADER)));
+						observer.onCompleted();
+					}
+					case ECHO_OTHER -> {
+						observer.onNext(String.valueOf(RequestContext.get(OTHER_HEADER)));
 						observer.onCompleted();
 					}
 					case ECHO_DEADLINE -> {

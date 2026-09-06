@@ -49,28 +49,25 @@ public class ValkeyCacheErrorHandler implements CacheErrorHandler {
 
 	@Override
 	public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
-		logger.error(
-				"Could not evict from cache '" + cache.getName() + "'; it may now be serving a value known to be stale",
-				exception);
-		throw exception;
+		throw stale("evict from", cache, exception);
 	}
 
 	@Override
 	public void handleCacheClearError(RuntimeException exception, Cache cache) {
-		logger.error("Could not clear cache '" + cache.getName() + "'; it may now be serving values known to be stale",
-				exception);
-		throw exception;
+		throw stale("clear", cache, exception);
 	}
 
 	private void degrade(String operation, Cache cache, RuntimeException exception) {
 		if (this.failFast) {
 			throw exception;
 		}
-		logger.warn("Could not " + operation + " cache '" + cache.getName() + "', continuing without it: "
-				+ exception.getMessage());
-		if (logger.isDebugEnabled()) {
-			logger.debug("Cache failure detail for '" + cache.getName() + "'", exception);
-		}
+		logger.warn("Could not " + operation + " cache '" + cache.getName() + "', continuing without it", exception);
+	}
+
+	private static RuntimeException stale(String operation, Cache cache, RuntimeException exception) {
+		logger.error("Could not " + operation + " cache '" + cache.getName() + "'; it may now be serving stale values",
+				exception);
+		return exception;
 	}
 
 }

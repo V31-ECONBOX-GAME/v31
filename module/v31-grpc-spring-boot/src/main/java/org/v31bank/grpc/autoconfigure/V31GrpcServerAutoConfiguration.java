@@ -21,7 +21,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.grpc.server.autoconfigure.GrpcServerAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.grpc.server.GlobalServerInterceptor;
@@ -39,7 +38,6 @@ import org.v31bank.grpc.UnexpectedExceptionGrpcExceptionHandler;
  */
 @AutoConfiguration(before = GrpcServerAutoConfiguration.class)
 @ConditionalOnClass({ ServerInterceptor.class, GrpcExceptionHandler.class })
-@EnableConfigurationProperties(V31GrpcProperties.class)
 public class V31GrpcServerAutoConfiguration {
 
 	@Bean
@@ -60,8 +58,8 @@ public class V31GrpcServerAutoConfiguration {
 	@GlobalServerInterceptor
 	@ConditionalOnMissingBean
 	@ConditionalOnBooleanProperty(name = "v31.grpc.propagation.enabled", matchIfMissing = true)
-	public HeaderPropagationServerInterceptor headerPropagationServerInterceptor(V31GrpcProperties properties) {
-		return new HeaderPropagationServerInterceptor(properties.getPropagation().getHeaders());
+	public HeaderPropagationServerInterceptor headerPropagationServerInterceptor() {
+		return new HeaderPropagationServerInterceptor();
 	}
 
 }

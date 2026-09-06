@@ -49,11 +49,6 @@ public class V31WebAutoConfiguration {
 		return new HttpResponseExceptionHandler();
 	}
 
-	/**
-	 * Registered only where a data access failure can happen. Guarded at class level
-	 * rather than on the {@code @Bean} method: Spring reflects over an advice's method
-	 * signatures, so without {@code spring-tx} the class must never be reached.
-	 */
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(DataAccessException.class)
 	public static class DataAccessExceptionHandlerConfiguration {

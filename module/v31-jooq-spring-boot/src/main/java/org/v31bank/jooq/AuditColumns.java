@@ -25,7 +25,7 @@ package org.v31bank.jooq;
 public final class AuditColumns {
 
 	/**
-	 * Primary key, a time-ordered UUIDv7.
+	 * Primary key.
 	 */
 	public static final String ID = "id";
 
@@ -35,7 +35,7 @@ public final class AuditColumns {
 	public static final String CREATED_BY = "created_by";
 
 	/**
-	 * When the row was inserted, as an instant.
+	 * When the row was inserted.
 	 */
 	public static final String CREATED_DATE = "created_date";
 
@@ -45,7 +45,7 @@ public final class AuditColumns {
 	public static final String LAST_MODIFIED_BY = "last_modified_by";
 
 	/**
-	 * When the row was last changed, as an instant.
+	 * When the row was last changed.
 	 */
 	public static final String LAST_MODIFIED_DATE = "last_modified_date";
 

@@ -33,9 +33,6 @@ public class V31WebProperties {
 		return this.exceptionHandling;
 	}
 
-	/**
-	 * How a failure that escapes a controller is reported.
-	 */
 	public static class ExceptionHandling {
 
 		/**

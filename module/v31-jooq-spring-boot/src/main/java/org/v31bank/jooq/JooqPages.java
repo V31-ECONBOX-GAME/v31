@@ -17,7 +17,6 @@
 package org.v31bank.jooq;
 
 import java.util.List;
-import java.util.Objects;
 
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -40,16 +39,12 @@ public final class JooqPages {
 
 	public static <R extends Record> HttpResponse<List<R>> fetch(DSLContext dsl, SelectLimitStep<R> query,
 			PageQuery page) {
-		Objects.requireNonNull(dsl, "dsl must not be null");
-		Objects.requireNonNull(query, "query must not be null");
-		Objects.requireNonNull(page, "page must not be null");
-		int number = page.normalizedPageNumber();
-		int size = page.normalizedPageSize();
 		long total = dsl.fetchCountLarge(query);
 		if (total == 0) {
 			return HttpResponse.page(List.of(), 0);
 		}
-		Result<R> records = query.offset((number - 1) * (long) size).limit(size).fetch();
+		int size = page.normalizedPageSize();
+		Result<R> records = query.offset((page.normalizedPageNumber() - 1) * (long) size).limit(size).fetch();
 		return HttpResponse.page(records, total);
 	}
 

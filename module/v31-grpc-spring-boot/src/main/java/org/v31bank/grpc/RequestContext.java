@@ -16,9 +16,8 @@
 
 package org.v31bank.grpc;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import io.grpc.Context;
@@ -31,17 +30,12 @@ import io.grpc.Context;
  */
 public final class RequestContext {
 
-	/**
-	 * Where the values live while a gRPC call is being served.
-	 */
-	public static final Context.Key<Map<String, String>> CONTEXT_KEY = Context.key("v31-request-context");
+	static final Context.Key<Map<String, String>> CONTEXT_KEY = Context.key("v31-request-context");
 
-	/**
-	 * What a value must look like to be carried: printable ASCII and bounded. These end
-	 * up in metadata, headers and log lines, where a newline forges a log entry and an
-	 * unbounded length makes every downstream call expensive.
-	 */
 	private static final Pattern ACCEPTED_VALUE = Pattern.compile("[\\x20-\\x7E]{1,256}");
+
+	private static final Set<String> CONNECTION_SPECIFIC = Set.of("connection", "proxy-connection", "keep-alive",
+			"transfer-encoding", "upgrade");
 
 	private static final ThreadLocal<Map<String, String>> THREAD_LOCAL = new ThreadLocal<>();
 
@@ -62,7 +56,6 @@ public final class RequestContext {
 	}
 
 	public static Scope attach(Map<String, String> values) {
-		Objects.requireNonNull(values, "values must not be null");
 		Map<String, String> previous = THREAD_LOCAL.get();
 		THREAD_LOCAL.set(Map.copyOf(values));
 		return () -> {
@@ -75,19 +68,12 @@ public final class RequestContext {
 		};
 	}
 
-	public static void put(Map<String, String> values, String name, String value) {
-		if (value != null && ACCEPTED_VALUE.matcher(value).matches()) {
+	static void put(Map<String, String> values, String name, String value) {
+		if (value != null && !CONNECTION_SPECIFIC.contains(name) && ACCEPTED_VALUE.matcher(value).matches()) {
 			values.put(name, value);
 		}
 	}
 
-	public static Map<String, String> newValues() {
-		return new LinkedHashMap<>();
-	}
-
-	/**
-	 * What {@link #attach} returns: closing it puts the thread back as it was.
-	 */
 	@FunctionalInterface
 	public interface Scope extends AutoCloseable {
 

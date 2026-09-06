@@ -39,9 +39,6 @@ public class V31JooqProperties {
 		return this.identifiers;
 	}
 
-	/**
-	 * Auditing properties.
-	 */
 	public static class Auditing {
 
 		/**
@@ -59,14 +56,10 @@ public class V31JooqProperties {
 
 	}
 
-	/**
-	 * Primary key properties.
-	 */
 	public static class Identifiers {
 
 		/**
-		 * Whether to give a record without a primary key a time-ordered UUIDv7. Disable
-		 * where the database supplies them instead.
+		 * Whether to give a record without a primary key a time-ordered UUIDv7.
 		 */
 		private boolean enabled = true;
 

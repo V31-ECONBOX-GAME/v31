@@ -17,8 +17,9 @@
 package org.v31bank.grpc;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import jakarta.servlet.FilterChain;
@@ -30,7 +31,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Puts an HTTP request's context into the platform.
+ * Puts every header of an HTTP request into the platform.
  *
  * @author Xander Wang
  * @since 0.2.0
@@ -38,18 +39,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class HeaderPropagationFilter extends OncePerRequestFilter {
 
-	private final List<String> propagated;
-
-	public HeaderPropagationFilter(Collection<String> propagatedHeaders) {
-		this.propagated = List.copyOf(propagatedHeaders);
-	}
-
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
-		Map<String, String> values = RequestContext.newValues();
-		for (String name : this.propagated) {
-			RequestContext.put(values, name, request.getHeader(name));
+		Map<String, String> values = new HashMap<>();
+		Enumeration<String> names = request.getHeaderNames();
+		while (names.hasMoreElements()) {
+			String name = names.nextElement();
+			RequestContext.put(values, name.toLowerCase(Locale.ROOT), request.getHeader(name));
 		}
 		try (RequestContext.Scope scope = RequestContext.attach(values)) {
 			chain.doFilter(request, response);
