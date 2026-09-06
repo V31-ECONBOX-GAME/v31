@@ -16,15 +16,12 @@
 
 package org.v31bank.build;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.springframework.boot.gradle.plugin.SpringBootPlugin;
@@ -56,12 +53,8 @@ public class FlywayPlugin implements Plugin<Project> {
 	}
 
 	private void addRuntimeDependencies(Project project) {
-		Provider<List<Dependency>> dependencies = project.provider(() -> migrations(project).isEmpty()
-				? Collections.emptyList() : RUNTIME.stream().map(project.getDependencies()::create).toList());
-		project.getConfigurations()
-			.getByName(JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME)
-			.getDependencies()
-			.addAllLater(dependencies);
+		RUNTIME.forEach(
+				(coordinate) -> project.getDependencies().add(JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME, coordinate));
 	}
 
 	private TaskProvider<ValidateMigrationNames> registerValidateMigrationNames(Project project) {

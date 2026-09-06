@@ -2,34 +2,35 @@ spring:
   application:
     name: v31-compliance-service
   jackson:
-    # HttpResponse leaves the members it is not using unset: without this a failure
-    # carries an empty payload and a success carries empty error fields.
     default-property-inclusion: non_null
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: wangxiang
     password: ""
-    hikari:
-      # Every service shares one database, so each one owns a schema. jOOQ names
-      # its tables unqualified, so the schema has to come from the connection:
-      # this puts every connection from the pool on `compliance` before jOOQ ever
-      # sees it. The JPA services do the equivalent with
-      # `hibernate.default_schema`.
-      schema: compliance
   flyway:
-    # Without this, all services would share `public` and its single
-    # flyway_schema_history, and each would refuse to start on finding
-    # migrations it does not have locally.
     schemas: compliance
     default-schema: compliance
     create-schemas: true
-  jooq:
-    sql-dialect: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: compliance
+        format_sql: true
+        highlight_sql: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
 
 server:
-  port: 8086
+  port: 8084
 
 logging:
   level:
     org.v31bank: DEBUG
-    org.jooq.tools.LoggerListener: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL_SLOW: INFO
+    org.hibernate.orm.jdbc.bind: TRACE

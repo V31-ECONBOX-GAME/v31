@@ -1,28 +1,23 @@
-# Integration tests run against a real PostgreSQL. jOOQ generates SQL for the
-# dialect it is told about and the tables it is pointed at, so an in-memory
-# substitute would be testing different SQL from the one that ships.
+# The datasource comes from a throwaway PostgreSQL container, so a test run
+# never touches a database anyone else is using. See PostgresContainerConfiguration.
 spring:
   application:
     name: v31-compliance-service-it
   jackson:
     default-property-inclusion: non_null
-  datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: wangxiang
-    password: ""
-    hikari:
-      schema: compliance_it
-      # An integration test drives one request at a time, so a pool sized for
-      # production concurrency only competes with the other services' contexts
-      # for the server's connection limit.
-      maximum-pool-size: 2
   flyway:
-    schemas: compliance_it
-    default-schema: compliance_it
+    schemas: compliance
+    default-schema: compliance
     create-schemas: true
-  jooq:
-    sql-dialect: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: compliance
 
 logging:
   level:
     org.v31bank: INFO
+    org.hibernate.SQL: WARN

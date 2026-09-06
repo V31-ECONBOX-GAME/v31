@@ -20,8 +20,10 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":starter:v31-web-spring-boot-starter"))
-    implementation(project(":starter:v31-jooq-spring-boot-starter"))
+	implementation(project(":starter:v31-web-spring-boot-starter"))
+	implementation(project(":starter:v31-data-jpa-spring-boot-starter"))
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation("org.testcontainers:testcontainers-postgresql")
 }

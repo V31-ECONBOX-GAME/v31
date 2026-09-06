@@ -2,17 +2,12 @@ spring:
   application:
     name: v31-transfer-service
   jackson:
-    # HttpResponse leaves the members it is not using unset: without this a failure
-    # carries an empty payload and a success carries empty error fields.
     default-property-inclusion: non_null
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: wangxiang
     password: ""
   flyway:
-    # Every service shares one database, so each one owns a schema. Without this
-    # they would share `public` and its single flyway_schema_history, and each
-    # would refuse to start on finding migrations it does not have locally.
     schemas: transfer
     default-schema: transfer
     create-schemas: true
@@ -25,6 +20,10 @@ spring:
         default_schema: transfer
         format_sql: true
         highlight_sql: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
 
 server:
   port: 8083
@@ -33,3 +32,5 @@ logging:
   level:
     org.v31bank: DEBUG
     org.hibernate.SQL: DEBUG
+    org.hibernate.SQL_SLOW: INFO
+    org.hibernate.orm.jdbc.bind: TRACE
