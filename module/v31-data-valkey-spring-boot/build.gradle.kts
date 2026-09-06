@@ -18,23 +18,24 @@ plugins {
     `java-library`
     id("org.v31bank.auto-configuration")
     id("org.v31bank.configuration-properties")
+    id("org.v31bank.optional-dependencies")
 }
 
 description = "V31 Data Valkey auto-configuration"
 
 dependencies {
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
-    api("org.springframework.boot:spring-boot")
-    api("org.springframework.boot:spring-boot-autoconfigure")
-    api("org.springframework.boot:spring-boot-data-redis")
-    api("org.springframework.data:spring-data-redis")
-    api("org.springframework.boot:spring-boot-cache")
-    api("tools.jackson.core:jackson-databind")
     api(project(":library:v31-core"))
+    api("org.springframework.boot:spring-boot-data-redis")
+    api("org.springframework.boot:spring-boot-cache")
+
+    optional("org.springframework.boot:spring-boot-autoconfigure")
+
+    implementation("tools.jackson.core:jackson-databind")
 
     testImplementation("org.springframework.boot:spring-boot-test")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")
     testImplementation("org.mockito:mockito-core")
+
+    testRuntimeOnly("ch.qos.logback:logback-classic")
 }

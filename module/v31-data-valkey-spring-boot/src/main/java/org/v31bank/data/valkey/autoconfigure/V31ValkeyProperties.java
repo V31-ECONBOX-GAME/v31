@@ -33,6 +33,9 @@ public class V31ValkeyProperties {
 
 	private final Cache cache = new Cache();
 
+	/**
+	 * Prefix every key this application writes begins with.
+	 */
 	private String keyPrefix = "v31";
 
 	public Cache getCache() {
@@ -49,20 +52,44 @@ public class V31ValkeyProperties {
 
 	public static class Cache {
 
+		/**
+		 * Whether to configure Spring's caching against Valkey.
+		 */
 		private boolean enabled = true;
 
+		/**
+		 * How long an entry lives when its cache is not named below.
+		 */
 		private Duration defaultTtl = Duration.ofMinutes(10);
 
+		/**
+		 * How long an entry lives, per cache name.
+		 */
 		private Map<String, Duration> ttls = new LinkedHashMap<>();
 
+		/**
+		 * Whether a lookup that found nothing may be cached.
+		 */
 		private boolean allowNullValues = true;
 
+		/**
+		 * How long a cached miss lives, capped at its cache's own TTL.
+		 */
 		private Duration nullTtl = Duration.ofMinutes(1);
 
+		/**
+		 * How far past its TTL an entry may live, as a fraction of that TTL.
+		 */
 		private double ttlJitter = 0.1;
 
+		/**
+		 * How many keys are scanned per round trip when a cache is cleared.
+		 */
 		private int clearBatchSize = 500;
 
+		/**
+		 * Whether a failed cache read or write fails the call.
+		 */
 		private boolean failFast;
 
 		public boolean isEnabled() {

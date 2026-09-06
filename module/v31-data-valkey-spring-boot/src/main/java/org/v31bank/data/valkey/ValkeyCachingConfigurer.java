@@ -22,11 +22,10 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 /**
  * Registers the {@link ValkeyCacheErrorHandler}.
  *
+ * @param errorHandler what happens when Valkey cannot be reached mid-call
  * @author Xander Wang
  * @since 0.2.0
  */
-public record ValkeyCachingConfigurer(
-		CacheErrorHandler errorHandler) implements CachingConfigurer {
-
+public record ValkeyCachingConfigurer(CacheErrorHandler errorHandler) implements CachingConfigurer {
 
 }
