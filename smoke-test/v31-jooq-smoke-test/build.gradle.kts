@@ -22,7 +22,9 @@ description = "V31 jOOQ smoke test"
 
 dependencies {
     implementation(project(":starter:v31-jooq-spring-boot-starter"))
-    runtimeOnly("com.h2database:h2")
-
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+
+    testRuntimeOnly("org.postgresql:postgresql")
 }

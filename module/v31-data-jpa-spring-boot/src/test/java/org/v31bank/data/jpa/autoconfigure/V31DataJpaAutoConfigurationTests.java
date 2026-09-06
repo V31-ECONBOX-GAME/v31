@@ -34,6 +34,9 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import org.v31bank.core.AuditorSupplier;
 import org.v31bank.data.jpa.Audited;
@@ -45,14 +48,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Xander Wang
  */
+@Testcontainers
 class V31DataJpaAutoConfigurationTests {
+
+	@Container
+	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine");
 
 	private final ApplicationContextRunner runner = new ApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class,
 				V31DataJpaAutoConfiguration.class))
 		.withUserConfiguration(PersistenceConfiguration.class)
-		.withPropertyValues("spring.datasource.url=jdbc:h2:mem:v31-audit;DB_CLOSE_DELAY=-1",
-				"spring.jpa.hibernate.ddl-auto=create-drop");
+		.withPropertyValues("spring.datasource.url=" + POSTGRES.getJdbcUrl(),
+				"spring.datasource.username=" + POSTGRES.getUsername(),
+				"spring.datasource.password=" + POSTGRES.getPassword(), "spring.jpa.hibernate.ddl-auto=create-drop");
 
 	@Test
 	void registersAnAuditorThatAnswersNothingUntilOneIsSupplied() {

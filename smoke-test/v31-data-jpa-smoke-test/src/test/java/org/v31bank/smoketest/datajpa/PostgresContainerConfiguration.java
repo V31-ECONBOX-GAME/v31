@@ -14,17 +14,25 @@
  * limitations under the License.
  */
 
-plugins {
-    java
-}
+package org.v31bank.smoketest.datajpa;
 
-description = "V31 Data JPA smoke test"
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
-dependencies {
-    implementation(project(":starter:v31-data-jpa-spring-boot-starter"))
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.boot:spring-boot-testcontainers")
-    testImplementation("org.testcontainers:testcontainers-postgresql")
+/**
+ * A throwaway PostgreSQL for the smoke test.
+ *
+ * @author Xander Wang
+ */
+@TestConfiguration(proxyBeanMethods = false)
+class PostgresContainerConfiguration {
 
-    testRuntimeOnly("org.postgresql:postgresql")
+	@Bean
+	@ServiceConnection
+	PostgreSQLContainer postgresContainer() {
+		return new PostgreSQLContainer("postgres:18-alpine");
+	}
+
 }

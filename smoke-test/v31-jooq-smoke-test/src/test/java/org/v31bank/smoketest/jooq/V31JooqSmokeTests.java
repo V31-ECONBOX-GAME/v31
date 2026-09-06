@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
 
 import org.v31bank.core.AuditorSupplier;
 import org.v31bank.jooq.AuditRecordListener;
@@ -28,6 +29,7 @@ import org.v31bank.jooq.AuditRecordListener;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Import(PostgresContainerConfiguration.class)
 class V31JooqSmokeTests {
 
 	@Autowired

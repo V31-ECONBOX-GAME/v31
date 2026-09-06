@@ -31,8 +31,10 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-test")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 
     testRuntimeOnly("com.zaxxer:HikariCP")
-    testRuntimeOnly("com.h2database:h2")
+    testRuntimeOnly("org.postgresql:postgresql")
     testRuntimeOnly("ch.qos.logback:logback-classic")
 }
