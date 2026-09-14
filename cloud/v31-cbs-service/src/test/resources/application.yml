@@ -1,0 +1,23 @@
+# The datasource comes from a throwaway PostgreSQL container, so a test run
+# never touches a database anyone else is using. See PostgresContainerConfiguration.
+spring:
+  application:
+    name: v31-cbs-service-it
+  jackson:
+    default-property-inclusion: non_null
+  flyway:
+    schemas: cbs
+    default-schema: cbs
+    create-schemas: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: cbs
+
+logging:
+  level:
+    org.v31bank: INFO
+    org.hibernate.SQL: WARN

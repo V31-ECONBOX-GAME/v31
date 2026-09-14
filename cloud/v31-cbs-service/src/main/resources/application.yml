@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: v31-cbs-service
+  jackson:
+    default-property-inclusion: non_null
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: wangxiang
+    password: ""
+  flyway:
+    schemas: cbs
+    default-schema: cbs
+    create-schemas: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: cbs
+        format_sql: true
+        highlight_sql: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
+
+server:
+  port: 8086
+
+logging:
+  level:
+    org.v31bank: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL_SLOW: INFO
+    org.hibernate.orm.jdbc.bind: TRACE

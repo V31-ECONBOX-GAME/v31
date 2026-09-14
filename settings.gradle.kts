@@ -52,6 +52,7 @@ include("cloud:v31-transfer-service")
 include("cloud:v31-ledger-service")
 include("cloud:v31-risk-service")
 include("cloud:v31-compliance-service")
+include("cloud:v31-cbs-service")
 
 include("platform:v31-dependencies")
 include("platform:v31-internal-dependencies")
