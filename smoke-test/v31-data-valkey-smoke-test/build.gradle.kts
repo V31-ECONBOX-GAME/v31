@@ -21,7 +21,7 @@ plugins {
 description = "V31 Data Valkey smoke test"
 
 dependencies {
-    implementation(project(":starter:v31-data-valkey-spring-boot-starter"))
+    implementation(project(":starter:v31-spring-boot-starter-data-valkey"))
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

@@ -18,11 +18,13 @@ plugins {
     id("org.v31bank.starter")
 }
 
-description = "V31 gRPC starter"
+description = "V31 Web starter"
 
 dependencies {
-    api("org.springframework.boot:spring-boot-starter-grpc-server")
-    api("org.springframework.boot:spring-boot-starter-grpc-client")
+	api(project(":starter:v31-spring-boot-starter"))
 
-	api(project(":module:v31-grpc-spring-boot"))
+    api("org.springframework.boot:spring-boot-starter-webmvc")
+    api("org.springframework.boot:spring-boot-starter-validation")
+
+	api(project(":module:v31-spring-boot-web"))
 }

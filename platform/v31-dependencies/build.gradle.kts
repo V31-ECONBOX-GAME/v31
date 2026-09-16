@@ -39,16 +39,17 @@ dependencies {
 
         api(project(":library:v31-core"))
 
-        api(project(":module:v31-data-jpa-spring-boot"))
-        api(project(":module:v31-data-valkey-spring-boot"))
-        api(project(":module:v31-grpc-spring-boot"))
-        api(project(":module:v31-jooq-spring-boot"))
-        api(project(":module:v31-web-spring-boot"))
+        api(project(":module:v31-spring-boot-data-jpa"))
+        api(project(":module:v31-spring-boot-data-valkey"))
+        api(project(":module:v31-spring-boot-grpc"))
+        api(project(":module:v31-spring-boot-jooq"))
+        api(project(":module:v31-spring-boot-web"))
 
-        api(project(":starter:v31-data-jpa-spring-boot-starter"))
-        api(project(":starter:v31-data-valkey-spring-boot-starter"))
-        api(project(":starter:v31-grpc-spring-boot-starter"))
-        api(project(":starter:v31-jooq-spring-boot-starter"))
-        api(project(":starter:v31-web-spring-boot-starter"))
+        api(project(":starter:v31-spring-boot-starter"))
+        api(project(":starter:v31-spring-boot-starter-data-jpa"))
+        api(project(":starter:v31-spring-boot-starter-data-valkey"))
+        api(project(":starter:v31-spring-boot-starter-grpc"))
+        api(project(":starter:v31-spring-boot-starter-jooq"))
+        api(project(":starter:v31-spring-boot-starter-web"))
     }
 }

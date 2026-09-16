@@ -21,7 +21,7 @@ plugins {
 description = "V31 jOOQ smoke test"
 
 dependencies {
-    implementation(project(":starter:v31-jooq-spring-boot-starter"))
+    implementation(project(":starter:v31-spring-boot-starter-jooq"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")

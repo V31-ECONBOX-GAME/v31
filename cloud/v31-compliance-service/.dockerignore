@@ -1,0 +1,10 @@
+# Only the boot jar under build/libs is copied in.
+src/
+k8s/
+build/classes/
+build/generated/
+build/reports/
+build/resources/
+build/test-results/
+build/tmp/
+*.gradle.kts

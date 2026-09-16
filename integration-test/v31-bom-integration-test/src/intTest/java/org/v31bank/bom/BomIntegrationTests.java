@@ -34,10 +34,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class BomIntegrationTests {
 
 	private static final List<String> ARTIFACTS = List.of("v31-compliance-api", "v31-customer-api", "v31-ledger-api",
-			"v31-risk-api", "v31-transfer-api", "v31-core", "v31-data-jpa-spring-boot", "v31-data-valkey-spring-boot",
-			"v31-grpc-spring-boot", "v31-jooq-spring-boot", "v31-web-spring-boot", "v31-data-jpa-spring-boot-starter",
-			"v31-data-valkey-spring-boot-starter", "v31-grpc-spring-boot-starter", "v31-jooq-spring-boot-starter",
-			"v31-web-spring-boot-starter");
+			"v31-risk-api", "v31-transfer-api", "v31-core", "v31-spring-boot-data-jpa", "v31-spring-boot-data-valkey",
+			"v31-spring-boot-grpc", "v31-spring-boot-jooq", "v31-spring-boot-web", "v31-spring-boot-starter",
+			"v31-spring-boot-starter-data-jpa", "v31-spring-boot-starter-data-valkey", "v31-spring-boot-starter-grpc",
+			"v31-spring-boot-starter-jooq", "v31-spring-boot-starter-web");
 
 	@TempDir
 	private Path consumer;
@@ -53,7 +53,7 @@ class BomIntegrationTests {
 
 	@Test
 	void resolvesTheThirdPartyLibrariesTheArtifactsNeed() throws IOException {
-		BuildResult result = new ConsumerBuild(this.consumer).resolve(List.of("v31-data-jpa-spring-boot"));
+		BuildResult result = new ConsumerBuild(this.consumer).resolve(List.of("v31-spring-boot-data-jpa"));
 		assertThat(result.getOutput()).contains("spring-boot-", "spring-data-jpa-", "hibernate-core-");
 	}
 

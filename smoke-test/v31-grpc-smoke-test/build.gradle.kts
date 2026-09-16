@@ -21,7 +21,7 @@ plugins {
 description = "V31 gRPC smoke test"
 
 dependencies {
-    implementation(project(":starter:v31-grpc-spring-boot-starter"))
+    implementation(project(":starter:v31-spring-boot-starter-grpc"))
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

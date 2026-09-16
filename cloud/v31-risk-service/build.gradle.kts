@@ -20,8 +20,8 @@ plugins {
 }
 
 dependencies {
-	implementation(project(":starter:v31-web-spring-boot-starter"))
-	implementation(project(":starter:v31-data-jpa-spring-boot-starter"))
+	implementation(project(":starter:v31-spring-boot-starter-web"))
+	implementation(project(":starter:v31-spring-boot-starter-data-jpa"))
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")

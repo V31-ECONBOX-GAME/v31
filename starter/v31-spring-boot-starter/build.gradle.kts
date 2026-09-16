@@ -15,13 +15,11 @@
  */
 
 plugins {
-    java
+    id("org.v31bank.starter")
 }
 
-description = "V31 web smoke test"
+description = "V31 Core starter"
 
 dependencies {
-    implementation(project(":starter:v31-spring-boot-starter-web"))
-
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    api(project(":library:v31-core"))
 }

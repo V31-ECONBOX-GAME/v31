@@ -18,10 +18,13 @@ plugins {
     id("org.v31bank.starter")
 }
 
-description = "V31 Data Valkey starter"
+description = "V31 gRPC starter"
 
 dependencies {
-    api("org.springframework.boot:spring-boot-starter-data-redis")
+	api(project(":starter:v31-spring-boot-starter"))
 
-	api(project(":module:v31-data-valkey-spring-boot"))
+    api("org.springframework.boot:spring-boot-starter-grpc-server")
+    api("org.springframework.boot:spring-boot-starter-grpc-client")
+
+	api(project(":module:v31-spring-boot-grpc"))
 }

@@ -18,10 +18,12 @@ plugins {
     id("org.v31bank.starter")
 }
 
-description = "V31 jOOQ starter"
+description = "V31 Data Valkey starter"
 
 dependencies {
-    api("org.springframework.boot:spring-boot-starter-jooq")
+	api(project(":starter:v31-spring-boot-starter"))
 
-	api(project(":module:v31-jooq-spring-boot"))
+    api("org.springframework.boot:spring-boot-starter-data-redis")
+
+	api(project(":module:v31-spring-boot-data-valkey"))
 }
