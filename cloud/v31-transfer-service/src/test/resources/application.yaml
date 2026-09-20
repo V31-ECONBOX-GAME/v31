@@ -2,12 +2,12 @@
 # never touches a database anyone else is using. See PostgresContainerConfiguration.
 spring:
   application:
-    name: v31-risk-service-it
+    name: v31-transfer-service-test
   jackson:
     default-property-inclusion: non_null
   flyway:
-    schemas: risk
-    default-schema: risk
+    schemas: transfer
+    default-schema: transfer
     create-schemas: true
   jpa:
     hibernate:
@@ -15,7 +15,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        default_schema: risk
+        default_schema: transfer
 
 logging:
   level:

@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
- * A throwaway PostgreSQL for the integration tests.
+ * A throwaway PostgreSQL for the tests.
  *
  * @author Xander Wang
  */

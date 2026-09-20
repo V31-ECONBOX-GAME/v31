@@ -2,12 +2,12 @@
 # never touches a database anyone else is using. See PostgresContainerConfiguration.
 spring:
   application:
-    name: v31-cbs-service-it
+    name: v31-risk-service-test
   jackson:
     default-property-inclusion: non_null
   flyway:
-    schemas: cbs
-    default-schema: cbs
+    schemas: risk
+    default-schema: risk
     create-schemas: true
   jpa:
     hibernate:
@@ -15,7 +15,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        default_schema: cbs
+        default_schema: risk
 
 logging:
   level:

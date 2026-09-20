@@ -45,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(PostgresContainerConfiguration.class)
-class CustomerApiIntegrationTests {
+class CustomerControllerTests {
 
 	private static final String PATH = "/api/v1/customers";
 
