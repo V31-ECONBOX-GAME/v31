@@ -1,11 +1,10 @@
-name: v31-xray
+name: kube-xray
 
 services:
   xray:
     image: ghcr.io/xtls/xray-core:26.3.27
-    command: ["-config", "/etc/xray/config.json"]
     restart: unless-stopped
     ports:
       - "443:443"
     volumes:
-      - ./config.json:/etc/xray/config.json:ro
+      - ./config.json:/usr/local/etc/xray/config.json:ro
