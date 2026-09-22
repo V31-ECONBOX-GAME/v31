@@ -1,8 +1,7 @@
-name: kube-xray
-
 services:
-  xray:
+  kube-xray:
     image: ghcr.io/xtls/xray-core:26.3.27
+    container_name: kube-xray
     restart: unless-stopped
     ports:
       - "443:443"
