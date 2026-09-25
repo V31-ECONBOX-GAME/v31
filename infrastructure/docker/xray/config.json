@@ -2,26 +2,9 @@
   "log": { "loglevel": "warning" },
   "inbounds": [
     {
-      "listen": "0.0.0.0",
-      "port": 443,
-      "protocol": "vless",
-      "settings": {
-        "clients": [
-          { "id": "efdfc5d0-1d8a-4d70-9a73-bd13fee6a296", "flow": "xtls-rprx-vision" }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "dest": "www.hkex.com.hk:443",
-          "serverNames": ["www.hkex.com.hk"],
-          "privateKey": "iKLD29y-Bd_5uW3-DkON67YHmCANDNb2SDqSSqvzTEI",
-          "shortIds": ["5a33a383db548f27"]
-        }
-      },
-      "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
+      "port": 1080,
+      "protocol": "socks",
+      "settings": { "udp": true }
     }
   ],
   "outbounds": [{ "protocol": "freedom" }]

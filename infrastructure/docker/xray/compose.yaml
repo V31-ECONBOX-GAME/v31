@@ -4,6 +4,7 @@ services:
     container_name: kube-xray
     restart: unless-stopped
     ports:
-      - "443:443"
+      - "1080:1080/tcp"
+      - "1080:1080/udp"
     volumes:
       - ./config.json:/usr/local/etc/xray/config.json:ro
