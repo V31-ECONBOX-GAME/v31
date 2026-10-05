@@ -1,0 +1,167 @@
+---
+# Routes and policies. The waypoint Gateway itself is in namespace.yaml, created and
+# waited for before any of this, so every reference below already resolves.
+#
+# East-west L7, enforced by the waypoint. parentRef is the Service, not a Gateway:
+# Istio treats a Service parentRef as a mesh route and honours the port, so this
+# route is what the waypoint runs for traffic addressed to echo:8080.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: echo-mesh
+  namespace: v31-demo
+spec:
+  parentRefs:
+    - group: ""
+      kind: Service
+      name: echo
+      port: 8080
+  rules:
+    # Header-based canary. Only an Envoy waypoint can read a header, so a request
+    # carrying x-v31-canary landing on echo-v2 is by itself proof of L7.
+    - matches:
+        - headers:
+            - name: x-v31-canary
+              value: "true"
+      backendRefs:
+        - name: echo-v2
+          port: 8080
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - name: x-v31-route
+                value: canary
+      timeouts:
+        request: 5s
+        backendRequest: 2s
+    # Default: 90/10 weighted split, plus a header the backend echoes back. The
+    # echoed header is the cheapest positive proof that the waypoint is in the path.
+    #
+    # There is no retry here on purpose: HTTPRoute.rules[].retry is experimental-channel
+    # only at Gateway API v1.6.2 and the standard channel is what versions.yml pins.
+    - backendRefs:
+        - name: echo-v1
+          port: 8080
+          weight: 90
+        - name: echo-v2
+          port: 8080
+          weight: 10
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - name: x-v31-mesh
+                value: waypoint
+      timeouts:
+        request: 5s
+        backendRequest: 2s
+---
+# North-south L7, enforced by the edge gateway. Cross-namespace parentRef is
+# permitted by the edge Gateway's allowedRoutes selector, which matches the
+# v31.org/expose-via-edge label on this namespace.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: echo-edge
+  namespace: v31-demo
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: v31-edge
+      namespace: istio-ingress
+  hostnames:
+    - echo.v31.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: echo
+          port: 8080
+      timeouts:
+        request: 10s
+---
+# L7 authorization, attached to the waypoint. Only a waypoint can enforce a method
+# or a path -- ztunnel sees L4 only -- so GET succeeding while POST is refused with
+# an HTTP 403 is the single clearest proof that Envoy, not ztunnel, is deciding.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: echo-l7
+  namespace: v31-demo
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: v31-demo-waypoint
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              # The client Deployment, and the edge gateway's own identity: istiod
+              # names a Gateway API ServiceAccount after the generated Deployment,
+              # which is <gateway>-<class> for the istio class.
+              - cluster.local/ns/v31-demo/sa/default
+              - cluster.local/ns/istio-ingress/sa/v31-edge-istio
+      to:
+        - operation:
+            methods: ["GET", "HEAD"]
+            # "/api" and "/api/*" are both listed: a trailing-* path is a prefix
+            # match, so "/api/*" alone would not admit "/api" itself, which is the
+            # exact route whoami serves.
+            paths: ["/", "/api", "/api/*"]
+---
+# L4 authorization, enforced by ztunnel on every echo pod: nothing reaches a pod
+# except the waypoint's identity, so the L7 policy above cannot be bypassed by
+# addressing a pod IP directly (which, with waypoint-for=service, skips the
+# waypoint). verify.yml asserts that bypass is refused.
+#
+# Kubelet probes are exempt: istio-cni redirects them inside the pod netns and
+# ztunnel does not apply policy to them. A pod-IP scraper such as Prometheus needs
+# its own principal added here.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: echo-require-waypoint
+  namespace: v31-demo
+spec:
+  selector:
+    matchLabels:
+      app: echo
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/v31-demo/sa/v31-demo-waypoint
+---
+# Ambient tunnels on 15008, and Calico's Felix sees kubelet probes arriving on the
+# application port. Both must be allowed once any NetworkPolicy selects these pods,
+# because selecting them at all makes them default-deny for ingress.
+#
+# Istio also documents 169.254.7.127/32 as the probe source, which is what the
+# in-pod rules SNAT to; it is listed for that reason and is harmless where Felix
+# sees the node address instead. A dual-stack cluster additionally needs
+# fd16:9254:7127:1337:ffff:ffff:ffff:ffff/128 -- this cluster is single-stack IPv4.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: echo-allow-hbone-and-probes
+  namespace: v31-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: echo
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - {protocol: TCP, port: 15008}
+        - {protocol: TCP, port: 8080}
+    - from:
+        - ipBlock:
+            cidr: 169.254.7.127/32

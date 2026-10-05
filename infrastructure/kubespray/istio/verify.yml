@@ -1,0 +1,344 @@
+---
+# Read-only checks on the ambient mesh. Safe to run at any time.
+#
+#   ansible-playbook -i inventory/v31/hosts.yaml istio/verify.yml
+#
+# Every check is a state query or a live request. Nothing greps a log: log text is
+# not API, and with logAsJson the fields are not even where a plain grep looks.
+
+- name: Verify CNI chaining on every node
+  hosts: k8s_cluster
+  become: true
+  gather_facts: false
+  vars:
+    calico_conflist: /etc/cni/net.d/10-calico.conflist
+  tasks:
+    - name: Read the plugin order
+      # Calico's install-cni is an initContainer, so it rewrites this file on every
+      # calico-node start, not just on upgrade; istio-cni's watcher re-appends itself
+      # a moment later. Retry rather than fail inside that window.
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - |
+            import json, sys
+            with open(sys.argv[1]) as f:
+                conf = json.load(f)
+            print(",".join(p["type"] for p in conf["plugins"]))
+          - "{{ calico_conflist }}"
+      register: istio_chain
+      changed_when: false
+      failed_when: false
+      until: istio_chain.rc == 0 and istio_chain.stdout.split(',')[-1] == 'istio-cni'
+      retries: 12
+      delay: 5
+
+    - name: Require calico first and istio-cni last in the chain
+      ansible.builtin.assert:
+        that:
+          - istio_chain.rc == 0
+          - istio_chain.stdout.split(',')[0] == 'calico'
+          - istio_chain.stdout.split(',')[-1] == 'istio-cni'
+        fail_msg: >-
+          {{ calico_conflist }}: chain is
+          '{{ istio_chain.stdout | default('<unreadable>') }}', expected calico first
+          and istio-cni last. If Calico is healthy, restart daemonset/istio-cni-node.
+        success_msg: "{{ inventory_hostname }}: {{ istio_chain.stdout }}"
+        quiet: true
+
+- name: Verify the mesh
+  hosts: "{{ istio_host_pattern | default('kube_control_plane[0]') }}"
+  become: true
+  gather_facts: false
+  vars_files:
+    - versions.yml
+  vars:
+    kubectl_bin: /usr/local/bin/kubectl
+    demo_namespace: v31-demo
+    waypoint_name: v31-demo-waypoint
+    edge_service: v31-edge-istio
+    helm_env:
+      KUBECONFIG: /etc/kubernetes/admin.conf
+      HOME: /root
+  tasks:
+    - name: Read the ambient node-proxy DaemonSets
+      ansible.builtin.command:
+        argv:
+          - "{{ kubectl_bin }}"
+          - get
+          - daemonset
+          - istio-cni-node
+          - ztunnel
+          - --namespace
+          - "{{ istio_namespace }}"
+          - -o
+          - json
+      environment: "{{ helm_env }}"
+      register: istio_daemonsets
+      changed_when: false
+
+    - name: Require a ready node proxy on every node
+      ansible.builtin.assert:
+        that:
+          - item.status.desiredNumberScheduled | default(0) | int == groups['k8s_cluster'] | length
+          - item.status.numberReady | default(0) | int == item.status.desiredNumberScheduled | default(0) | int
+        fail_msg: >-
+          {{ item.metadata.name }}: {{ item.status.numberReady | default(0) }} ready of
+          {{ item.status.desiredNumberScheduled | default(0) }} scheduled, on a cluster
+          of {{ groups['k8s_cluster'] | length }} nodes
+        success_msg: >-
+          {{ item.metadata.name }}: {{ item.status.numberReady | default(0) }}/{{ item.status.desiredNumberScheduled | default(0) }}
+        quiet: true
+      loop: "{{ (istio_daemonsets.stdout | from_json)['items'] }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Read the CNI agent's ambient configuration
+      # This is the switch that makes the agent install in-pod redirection rules.
+      # It replaces grepping ztunnel's log for a config field: ztunnel 1.31 has no
+      # `inpod_enabled` field at all (the equivalent is proxy_mode: Shared), the
+      # chart still sets a legacy INPOD_ENABLED env that ztunnel does not read, and
+      # values/ztunnel.yaml sets logAsJson so the log is JSON either way.
+      ansible.builtin.command:
+        argv:
+          - "{{ kubectl_bin }}"
+          - get
+          - configmap
+          - istio-cni-config
+          - --namespace
+          - "{{ istio_namespace }}"
+          - -o
+          - json
+      environment: "{{ helm_env }}"
+      register: istio_cni_config
+      changed_when: false
+
+    - name: Require the CNI agent to be in chained ambient mode
+      vars:
+        cni_data: "{{ (istio_cni_config.stdout | from_json).data }}"
+      ansible.builtin.assert:
+        that:
+          - cni_data.AMBIENT_ENABLED == "true"
+          - cni_data.CHAINED_CNI_PLUGIN == "true"
+          - cni_data.ISTIO_OWNED_CNI_CONFIG == "false"
+        fail_msg: >-
+          istio-cni-config says AMBIENT_ENABLED={{ cni_data.AMBIENT_ENABLED }},
+          CHAINED_CNI_PLUGIN={{ cni_data.CHAINED_CNI_PLUGIN }},
+          ISTIO_OWNED_CNI_CONFIG={{ cni_data.ISTIO_OWNED_CNI_CONFIG }};
+          ambient needs true, true, false
+        success_msg: "istio-cni: ambient enabled, chained into the primary conflist"
+        quiet: true
+
+    - name: Read the waypoint Gateway status
+      ansible.builtin.command:
+        argv:
+          - "{{ kubectl_bin }}"
+          - get
+          - gateway
+          - "{{ waypoint_name }}"
+          - --namespace
+          - "{{ demo_namespace }}"
+          - -o
+          - 'jsonpath={.status.conditions[?(@.type=="Programmed")].status}'
+      environment: "{{ helm_env }}"
+      register: istio_waypoint_programmed
+      changed_when: false
+      when: istio_deploy_sample_app | bool
+
+    - name: Require the waypoint to be programmed
+      ansible.builtin.assert:
+        that: istio_waypoint_programmed.stdout == "True"
+        fail_msg: "{{ waypoint_name }} Programmed={{ istio_waypoint_programmed.stdout | default('<absent>') }}"
+        success_msg: "{{ waypoint_name }}: Programmed"
+        quiet: true
+      when: istio_deploy_sample_app | bool
+
+    - name: Report every Gateway's programmed status
+      # The edge Gateway is reported, not asserted: it is a LoadBalancer, so
+      # Programmed stays False until kube-vip claims .241 from the annotation.
+      ansible.builtin.command:
+        argv:
+          - "{{ kubectl_bin }}"
+          - get
+          - gateway
+          - --all-namespaces
+          - -o
+          - 'jsonpath={range .items[*]}{.metadata.namespace}/{.metadata.name}={.status.conditions[?(@.type=="Programmed")].status} {end}'
+      environment: "{{ helm_env }}"
+      register: istio_gateways
+      changed_when: false
+
+    - name: Report gateway status
+      ansible.builtin.debug:
+        msg: "{{ istio_gateways.stdout }}"
+
+    - name: Sample-app proofs
+      when: istio_deploy_sample_app | bool
+      block:
+        - name: Read the sample pods
+          ansible.builtin.command:
+            argv:
+              - "{{ kubectl_bin }}"
+              - get
+              - pods
+              - --namespace
+              - "{{ demo_namespace }}"
+              - -l
+              - app in (echo,client)
+              - -o
+              - json
+          environment: "{{ helm_env }}"
+          register: istio_demo_pods
+          changed_when: false
+
+        - name: Require every sample pod to be captured by ztunnel
+          # istio-cni writes this annotation itself, and only after it has actually
+          # set up the pod's redirection. It is the per-pod state that a log line
+          # about the DaemonSet's own configuration can never establish.
+          ansible.builtin.assert:
+            that: item.metadata.annotations['ambient.istio.io/redirection'] | default('') == 'enabled'
+            fail_msg: >-
+              {{ item.metadata.name }}: ambient.istio.io/redirection is not 'enabled';
+              istio-cni has not set up redirection for this pod
+            success_msg: "{{ item.metadata.name }}: captured"
+            quiet: true
+          loop: "{{ (istio_demo_pods.stdout | from_json)['items'] }}"
+          loop_control:
+            label: "{{ item.metadata.name }}"
+
+        - name: L7 proof 1 - the waypoint routes and answers
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "10", -o, /dev/null, -w, "%{http_code}",
+                   "http://echo:8080/"]
+          environment: "{{ helm_env }}"
+          register: istio_l7_allow
+          changed_when: false
+          failed_when: false
+          # First request after an apply; give xDS time to reach the waypoint.
+          until: istio_l7_allow.stdout == "200"
+          retries: 12
+          delay: 5
+
+        - name: Require GET / to succeed
+          ansible.builtin.assert:
+            that: istio_l7_allow.stdout == "200"
+            fail_msg: "GET http://echo:8080/ returned {{ istio_l7_allow.stdout }}, expected 200"
+            success_msg: "GET / -> 200"
+            quiet: true
+
+        - name: L7 proof 2 - the waypoint rewrote the request
+          # whoami echoes back the request it received. x-v31-mesh is set by the
+          # HTTPRoute's RequestHeaderModifier, which only an Envoy waypoint runs, so
+          # finding it at the backend means the request transited the waypoint.
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "10", "http://echo:8080/"]
+          environment: "{{ helm_env }}"
+          register: istio_l7_header
+          changed_when: false
+
+        - name: Require the waypoint's injected header in the response body
+          ansible.builtin.assert:
+            that: istio_l7_header.stdout is search('(?i)x-v31-mesh:[ ]*waypoint')
+            fail_msg: "echo did not report the x-v31-mesh header; the request did not transit the waypoint"
+            success_msg: "x-v31-mesh: waypoint observed at the backend"
+            quiet: true
+
+        - name: L7 proof 3 - header-based canary routing
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "10", -H, "x-v31-canary: true", "http://echo:8080/"]
+          environment: "{{ helm_env }}"
+          register: istio_l7_canary
+          changed_when: false
+
+        - name: Require the canary header to select echo-v2
+          ansible.builtin.assert:
+            that: istio_l7_canary.stdout is search('Name:[ ]*echo-v2')
+            fail_msg: "x-v31-canary did not route to echo-v2; body was: {{ istio_l7_canary.stdout | truncate(200) }}"
+            success_msg: "x-v31-canary: true -> echo-v2"
+            quiet: true
+
+        - name: L7 proof 4 - the method-based policy refuses a write
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "10", -X, POST, -o, /dev/null, -w, "%{http_code}",
+                   "http://echo:8080/"]
+          environment: "{{ helm_env }}"
+          register: istio_l7_deny_method
+          changed_when: false
+          failed_when: istio_l7_deny_method.stdout != "403"
+
+        - name: L7 proof 5 - the path-based policy refuses an unlisted path
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "10", -o, /dev/null, -w, "%{http_code}",
+                   "http://echo:8080/not-allowed"]
+          environment: "{{ helm_env }}"
+          register: istio_l7_deny_path
+          changed_when: false
+          failed_when: istio_l7_deny_path.stdout != "403"
+
+        - name: Read an echo pod address
+          ansible.builtin.command:
+            argv:
+              - "{{ kubectl_bin }}"
+              - get
+              - pods
+              - --namespace
+              - "{{ demo_namespace }}"
+              - -l
+              - app=echo
+              - -o
+              - jsonpath={.items[0].status.podIP}
+          environment: "{{ helm_env }}"
+          register: istio_echo_pod_ip
+          changed_when: false
+          failed_when: istio_echo_pod_ip.stdout | length == 0
+
+        - name: L4 proof - the waypoint cannot be bypassed
+          # waypoint-for=service means a pod IP skips the waypoint, so this request
+          # meets ztunnel's L4 policy, which admits only the waypoint's identity.
+          # A 200 here would mean the L7 policy above is decorative.
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "5", -o, /dev/null, -w, "%{http_code}",
+                   "http://{{ istio_echo_pod_ip.stdout }}:8080/"]
+          environment: "{{ helm_env }}"
+          register: istio_l4_bypass
+          changed_when: false
+          failed_when: istio_l4_bypass.stdout == "200"
+
+        - name: North-south proof - the edge Gateway reaches echo through the waypoint
+          # Sent to the edge Service from inside the cluster, so it needs neither a
+          # LoadBalancer address nor a nodePort reachable from the controller.
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", exec, deployment/client, -n, "{{ demo_namespace }}", --,
+                   curl, -sS, --max-time, "10", -H, "Host: echo.v31.local", -o, /dev/null, -w, "%{http_code}",
+                   "http://{{ edge_service }}.{{ istio_ingress_namespace }}.svc.cluster.local/"]
+          environment: "{{ helm_env }}"
+          register: istio_edge_request
+          changed_when: false
+          failed_when: false
+          until: istio_edge_request.stdout == "200"
+          retries: 12
+          delay: 5
+
+        - name: Require the edge route to succeed
+          ansible.builtin.assert:
+            that: istio_edge_request.stdout == "200"
+            fail_msg: >-
+              GET http://{{ edge_service }}.{{ istio_ingress_namespace }}/ (Host: echo.v31.local)
+              returned {{ istio_edge_request.stdout }}, expected 200
+            success_msg: "edge -> waypoint -> echo: 200"
+            quiet: true
+
+        - name: Summary
+          ansible.builtin.debug:
+            msg:
+              - "L4 (ztunnel): every sample pod captured; pod-IP bypass refused ({{ istio_l4_bypass.stdout }})"
+              - "L7 (waypoint): GET 200, header rewrite observed, canary routed to echo-v2"
+              - "L7 authz: POST 403, unlisted path 403"
+              - "North-south: edge Gateway 200 through the waypoint"

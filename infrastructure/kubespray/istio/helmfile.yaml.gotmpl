@@ -1,0 +1,95 @@
+# Every third-party chart this cluster installs, declared once.
+#
+# Helmfile owns install order, drift detection and the values wiring that used to
+# be hand-written Ansible around `helm upgrade`. Adding a chart means adding a
+# release here -- not another task.
+#
+#   helmfile -f istio/helmfile.yaml.gotmpl diff     what would change
+#   helmfile -f istio/helmfile.yaml.gotmpl apply    converge
+#   helmfile -f istio/helmfile.yaml.gotmpl destroy  remove every release
+#
+# Versions come from the environment so versions.env stays the single source:
+# Templating requires the .gotmpl extension in Helmfile v1.
+# ISTIO_VERSION and ISTIO_CHART_REGISTRY are exported by scripts/lib/common.sh
+# and by the Makefile. istio/install.yml passes the same values.
+
+environments:
+  default:
+    values:
+      - istioVersion: {{ requiredEnv "ISTIO_VERSION" | quote }}
+        istioNamespace: {{ env "ISTIO_NAMESPACE" | default "istio-system" | quote }}
+        ingressNamespace: {{ env "ISTIO_INGRESS_NAMESPACE" | default "istio-ingress" | quote }}
+        # The standalone gateway chart is an alternative to the Gateway API path
+        # in manifests/ingress-gateway.yaml. Off by default; both would fight.
+        installGatewayChart: {{ env "ISTIO_INSTALL_GATEWAY_CHART" | default "false" }}
+---
+
+repositories:
+  # OCI is Istio's supported chart channel from 1.31 onward. The HTTPS repo below
+  # is the documented fallback; swap `chart:` prefixes to use it.
+  - name: istio
+    url: ghcr.io/istio/release/charts
+    oci: true
+
+helmDefaults:
+  wait: true
+  # 2-vCPU control planes on an oversubscribed host: istiod's own readiness can
+  # take minutes, and a shorter timeout reports failure on a cluster that is only
+  # slow. See docs/troubleshooting.md section 5.
+  timeout: 600
+  createNamespace: true
+  historyMax: 5
+
+releases:
+  # CRDs first: istiod's validating webhook and every waypoint depend on them.
+  - name: istio-base
+    chart: istio/base
+    version: {{ .Values.istioVersion }}
+    namespace: {{ .Values.istioNamespace }}
+    values:
+      - values/base.yaml
+
+  # The control plane. profile: ambient lives in values/istiod.yaml and is what
+  # turns on PILOT_ENABLE_AMBIENT and the waypoint templates.
+  - name: istiod
+    chart: istio/istiod
+    version: {{ .Values.istioVersion }}
+    namespace: {{ .Values.istioNamespace }}
+    needs:
+      - {{ .Values.istioNamespace }}/istio-base
+    values:
+      - values/istiod.yaml
+
+  # Traffic redirection. Chains onto Calico's conflist rather than replacing it --
+  # values/cni.yaml pins cniConfDir/cniBinDir to where Kubespray's Calico writes.
+  - name: istio-cni
+    chart: istio/cni
+    version: {{ .Values.istioVersion }}
+    namespace: {{ .Values.istioNamespace }}
+    needs:
+      - {{ .Values.istioNamespace }}/istiod
+    values:
+      - values/cni.yaml
+
+  # L4 data plane. Must come after istio-cni or pods enrol before redirection
+  # exists and silently stay out of the mesh.
+  - name: ztunnel
+    chart: istio/ztunnel
+    version: {{ .Values.istioVersion }}
+    namespace: {{ .Values.istioNamespace }}
+    needs:
+      - {{ .Values.istioNamespace }}/istio-cni
+    values:
+      - values/ztunnel.yaml
+
+  # Off by default: the edge is a Gateway API resource in
+  # manifests/ingress-gateway.yaml, which istiod provisions itself.
+  - name: istio-ingress
+    chart: istio/gateway
+    version: {{ .Values.istioVersion }}
+    namespace: {{ .Values.ingressNamespace }}
+    installed: {{ .Values.installGatewayChart }}
+    needs:
+      - {{ .Values.istioNamespace }}/istiod
+    values:
+      - values/gateway.yaml

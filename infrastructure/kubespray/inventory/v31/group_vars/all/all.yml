@@ -1,0 +1,71 @@
+---
+bin_dir: /usr/local/bin
+
+## Control-plane VIP
+# Single source of truth for the VIP, consumed by group_vars/all/kube-vip.yml
+# (kube_vip_enabled, loadbalancer_apiserver) and by the cert SANs below.
+#
+# Must sit on 192.168.139.0/24 to be reachable by ARP from the nodes and the macOS
+# host. .200-.254 answered no ARP except .212 (w3) when this was written, but the
+# bounds of OrbStack's DHCP pool are not exposed, so a future machine could be
+# leased this address. See the collision risk in the track report.
+kube_vip_address: 192.168.139.240
+
+# Additive only, and APISERVER ONLY -- roles/etcd builds its own alt_names and never
+# reads this. The etcd equivalent is etcd_cert_alt_ips in group_vars/all/etcd.yml.
+#
+# The node addresses are derived at run time, not listed: they are DHCP with 1-day
+# leases and five of the six moved by +1 on 2026-09-27. A literal list here would
+# hand the apiserver a certificate that no longer covers its own nodes.
+# Best-effort by design: Kubespray evaluates this before every host's facts are
+# gathered, so a hard reference explodes with "HostVarsVars has no attribute
+# ansible_default_ipv4". Hosts whose facts are not in yet contribute nothing; the
+# VIP is always present, and Kubespray adds each node's OWN address regardless.
+supplementary_addresses_in_ssl_keys: >-
+  {{ ([kube_vip_address] + (groups['k8s_cluster'] | default([])
+      | map('extract', hostvars)
+      | map(attribute='ansible_default_ipv4.address', default='')
+      | reject('equalto', '') | list)) | unique }}
+
+## DNS
+# /etc/resolv.conf is a symlink to /opt/orbstack-guest/etc/resolv.conf, which sits
+# on a read-only overlay mount. Kubespray's default host_resolvconf mode edits that
+# file in place (blockinfile) and fails. systemd-resolved and NetworkManager are
+# both inactive here, so no alternate code path applies. 'none' leaves it alone;
+# pod DNS is unaffected because it comes from kubelet clusterDNS.
+resolvconf_mode: none
+
+# CoreDNS forwards to its own /etc/resolv.conf when this is empty, which on these
+# nodes means OrbStack's internal resolver 0.250.250.200 - an address that only
+# answers from the node's own network namespace. Pin public resolvers instead.
+upstream_dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+
+## Swap
+# OrbStack supplies swap from the VM layer: /dev/zram0 (41G, priority 32767) and
+# /dev/vdc (1G, priority 1). Neither is in /etc/fstab and there are no .swap units,
+# so Kubespray's 0010-swapoff.yml - which clears fstab entries and masks
+# swap.target - cannot keep it off across a reboot. swapoff itself does work.
+#
+# false stops kubelet refusing to start while swap exists, and also skips
+# 0010-swapoff.yml entirely (it is gated on `when: kubelet_fail_swap_on`).
+# playbooks/orbstack-prepare.yml performs the durable swapoff instead.
+kubelet_fail_swap_on: false
+# No pod is granted swap even while a swap device is present.
+kubelet_swap_behavior: NoSwap
+
+additional_sysctl:
+  - { name: vm.swappiness, value: 0 }
+
+## Misc
+# Time comes from the OrbStack VM layer.
+ntp_enabled: false
+ntp_manage_config: false
+
+# Ubuntu is in supported_os_distributions and the release is not version-gated,
+# so 26.04 needs no override here.
+allow_unsupported_distribution_setup: false
+
+unsafe_show_logs: false
+no_proxy_exclude_workers: false

@@ -1,0 +1,116 @@
+---
+# istio/istiod 1.31.1 - ambient control plane.
+# profile=ambient sets PILOT_ENABLE_AMBIENT=true and HBONE in the mesh config.
+profile: ambient
+
+global:
+  hub: docker.io/istio
+  tag: 1.31.1
+  variant: distroless
+  istioNamespace: istio-system
+  logAsJson: true
+  # iptables-legacy is compiled into the OrbStack kernel; nftables mode is untested here.
+  nativeNftables: false
+
+  proxy:
+    # Envoy in the north-south gateway pods.
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+
+  waypoint:
+    # Envoy in every waypoint. One per enrolled namespace or service.
+    # 100m/128Mi is the floor an Envoy needs to load its config without a visible
+    # delay; the memory limit is what protects the node, because these machines are
+    # cgroup-limited containers and a container over its own limit is killed by
+    # name instead of the kernel picking a victim by oom_score.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+
+    # Waypoints are Deployments istiod provisions from a Gateway and carry no
+    # toleration for the control-plane taint, so they already cannot reach
+    # cp1/cp2/cp3. Stated so it stays true if a cp node ever joins kube_node.
+    nodeSelector:
+      kubernetes.io/os: linux
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: DoesNotExist
+
+# Fixed two replicas rather than an HPA: three schedulable workers, predictable cost.
+autoscaleEnabled: false
+replicaCount: 2
+
+# Nine xDS clients at full size - six ztunnels, two gateway Envoys, one waypoint -
+# so 1Gi of request reserved 13% of a worker's real 10GiB for an idle ~120Mi.
+# No CPU limit: a full push is bursty and throttling it stalls every proxy's config.
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    memory: 1Gi
+
+# cp1/cp2/cp3 have 2 vCPU and already carry etcd, the three kubeadm control-plane
+# pods, kube-proxy, kube-vip, calico-node, ztunnel and istio-cni. kubeadm taints
+# them node-role.kubernetes.io/control-plane:NoSchedule because they are in
+# kube_control_plane and not kube_node, and Kubespray only removes that taint for a
+# host in both groups - so istiod reaches the workers today only by accident of the
+# taint. This makes it a requirement, off a label kubeadm sets on every
+# control-plane node, so no new node label is needed.
+nodeSelector:
+  kubernetes.io/os: linux
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+
+# Deliberately empty. The chart always adds cni.istio.io/not-ready itself, and a
+# control-plane toleration here is the one entry that would undo the affinity above.
+tolerations: []
+
+# nodeAffinity is honoured when skew is computed, so the three workers are the only
+# domains and two replicas land on two of them.
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app: istiod
+
+# istio-cni is installed, so the sidecar injector must not add istio-init.
+cni:
+  enabled: true
+  provider: default
+
+# Kubespray does not apply cni.istio.io/not-ready, so the untaint controller is idle.
+# The CNI agent's repairPods handles pods that start before it is ready.
+taint:
+  enabled: false
+
+env:
+  # Let the north-south gateway route through the destination waypoint, so L7
+  # policy attached to the waypoint also covers ingress traffic.
+  ENABLE_INGRESS_WAYPOINT_ROUTING: "true"
+
+meshConfig:
+  accessLogFile: /dev/stdout
+  accessLogEncoding: JSON
+  enablePrometheusMerge: true

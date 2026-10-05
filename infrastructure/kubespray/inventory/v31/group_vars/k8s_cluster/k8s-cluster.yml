@@ -1,0 +1,101 @@
+---
+## Versions
+# Pinned rather than inherited so the committed tree describes one exact cluster.
+# Kubespray v2.32.0 ships checksums for 1.34.0-1.36.4 on both amd64 and arm64;
+# kube_version_min_required resolves to 1.34.0.
+# No "v" prefix: the download URL is built as release/v{{ kube_version }} and the
+# checksum tables are keyed on the bare version.
+kube_version: "1.36.4"
+
+kube_config_dir: /etc/kubernetes
+kube_script_dir: "{{ bin_dir }}/kubernetes-scripts"
+kube_manifest_dir: "{{ kube_config_dir }}/manifests"
+kube_cert_dir: "{{ kube_config_dir }}/ssl"
+kube_token_dir: "{{ kube_config_dir }}/tokens"
+credentials_dir: "{{ inventory_dir }}/credentials"
+
+kube_owner: kube
+kube_cert_group: kube-cert
+kube_log_level: 2
+kube_api_anonymous_auth: true
+local_release_dir: /tmp/releases
+retry_stagger: 5
+
+## Container runtime
+container_manager: containerd
+kata_containers_enabled: false
+
+## Network plugin
+kube_network_plugin: calico
+kube_network_plugin_multus: false
+
+## Addressing
+# Neither range collides with 192.168.139.0/24 (nodes), 192.168.138.0/24 (OrbStack
+# host-side proxy addresses), 192.168.0.0/24, 172.30.0.0/24, 10.211.55.0/24, or with
+# 198.18.0.0/15, which OrbStack uses to map external addresses.
+kube_service_addresses: 10.233.0.0/18
+kube_pods_subnet: 10.233.64.0/18
+# /18 of pod space at /24 per node = 64 node blocks for 6 nodes, 254 addresses each.
+kube_network_node_prefix: 24
+
+kube_apiserver_port: 6443
+
+## kube-proxy
+# iptables, not Kubespray's ipvs default. This is the mode upstream exercises for
+# this OS (tests/files/ubuntu26-calico-all-in-one.yml), it removes the kube-ipvs0
+# dummy interface that complicates kube-vip's ARP VIP, and it keeps the netfilter
+# path simple alongside Calico and Istio ztunnel. Note that ip_vs, ip_vs_rr,
+# ip_vs_wrr and ip_vs_sh do all load on this kernel, so ipvs stays available if it
+# is ever wanted - unlike the KVM image upstream CI runs on, where they are absent.
+kube_proxy_mode: iptables
+# group_vars/all/kube-vip.yml also sets this true, on the assumption that
+# kube_proxy_mode is still Kubespray's ipvs default. It is not, so the kube-vip
+# role's strict-ARP guard no longer applies and there is no kube-ipvs0 to answer ARP
+# for the VIP. Kept true anyway: the values agree, and it stays correct if anyone
+# moves back to ipvs.
+kube_proxy_strict_arp: true
+
+## DNS
+cluster_name: cluster.local
+dns_mode: coredns
+ndots: 2
+# Disabled to match the one Ubuntu 26.04 configuration upstream CI covers, and to
+# keep the link-local 169.254.25.10 listener out of the path while Istio ambient
+# redirection is introduced. Pods resolve via the CoreDNS service address.
+enable_nodelocaldns: false
+# Repeated from group_vars/all/all.yml because /etc/resolv.conf is read-only here.
+# Also set here, not only in group_vars/all/all.yml, so a k8s_cluster-level override
+# cannot re-enable host_resolvconf on these read-only /etc/resolv.conf guests.
+resolvconf_mode: none
+
+## Certificates
+# Control-plane certs renew on the first Monday of each month.
+auto_renew_certificates: true
+
+kube_encrypt_secret_data: false
+kubernetes_audit: false
+event_ttl_duration: "1h0m0s"
+remove_anonymous_access: false
+k8s_image_pull_policy: IfNotPresent
+
+## Node resources
+# Control planes have 2 vCPU and a 4 GiB cgroup; workers 4 vCPU and 10 GiB.
+# /proc/meminfo reports the OrbStack VM's 41.14 GiB on every node, so kubelet
+# over-advertises memory by roughly 10x unless it is reserved away. The actual
+# reservations live in group_vars/kube_control_plane/kubelet.yml and
+# group_vars/kube_node/kubelet.yml; these two flags only switch the mechanism on.
+# See docs/troubleshooting.md for what an unreserved node does under load.
+kube_reserved: true
+system_reserved: true
+
+persistent_volumes_enabled: false
+volume_cross_zone_attachment: false
+
+## Operator convenience
+# Writes the admin kubeconfig to {{ inventory_dir }}/artifacts, which .gitignore
+# excludes.
+kubeconfig_localhost: true
+kubectl_localhost: false
+
+kubeadm_patches_dir: "{{ kube_config_dir }}/patches"
+kubeadm_patches: []

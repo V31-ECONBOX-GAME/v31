@@ -1,0 +1,49 @@
+---
+# istio/cni 1.31.1 - CNI node agent. Required for ambient mode.
+# Chains after Calico and notifies the agent when an enrolled pod is created.
+profile: ambient
+
+global:
+  hub: docker.io/istio
+  tag: 1.31.1
+  variant: distroless
+  logAsJson: true
+  nativeNftables: false
+
+# Kubespray/Calico defaults. cniConfFileName empty means the agent appends itself
+# to the first conflist it finds, which is 10-calico.conflist.
+chained: true
+cniConfDir: /etc/cni/net.d
+cniBinDir: /opt/cni/bin
+cniConfFileName: ""
+cniNetnsDir: /var/run/netns
+
+ambient:
+  enabled: true
+  dnsCapture: true
+  # Pod netns get an IPv6 link-local from Calico; set false if IPv6 is disabled there.
+  ipv6: true
+  reconcileIptablesOnStartup: true
+
+# Fixes pods that started before the agent was ready instead of deleting them.
+repair:
+  enabled: true
+  repairPods: true
+  labelPods: false
+  deletePods: false
+
+# Never redirect the mesh's own components or the gateway data plane.
+excludeNamespaces:
+  - kube-system
+  - istio-system
+  - istio-ingress
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  # A memory limit, not a CPU one: istio-cni runs on all six nodes including the
+  # three with a 4 GiB cgroup, where an unbounded pod is charged against a budget
+  # kubelet cannot see. CPU stays unlimited -- throttling the CNI stalls pod setup.
+  limits:
+    memory: 256Mi

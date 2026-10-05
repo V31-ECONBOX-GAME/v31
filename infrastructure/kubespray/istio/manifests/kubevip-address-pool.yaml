@@ -1,0 +1,15 @@
+---
+# LoadBalancer address pool for the kube-vip cloud provider. Owned by the kube-vip
+# track; applied from here only when istio_apply_kubevip_pool is true.
+# Starts at .241: .240 is the control-plane VIP (kube_vip_address) and must never
+# be allocated to a Service. The chosen path is the kube-vip.io/loadbalancerIPs
+# annotation on the Gateway Service, which needs no pool and no cloud provider --
+# see manifests/kube-vip/address-allocation.yaml. This file exists only as the
+# alternative, and stays unapplied while istio_apply_kubevip_pool is false.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubevip
+  namespace: kube-system
+data:
+  range-istio-ingress: "192.168.139.241-192.168.139.245"

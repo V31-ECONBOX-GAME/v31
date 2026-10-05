@@ -1,0 +1,17 @@
+---
+# Node reservations for w1/w2/w3, which are cgroup-limited to 4 vCPU and 10 GiB.
+# Same reasoning as inventory/v31/group_vars/kube_control_plane/kubelet.yml: node
+# capacity comes from the VM's /proc/meminfo, not from the machine's cgroup.
+#
+# 41.14 GiB capacity - 1 GiB kube - 31 GiB system - 1 GiB eviction
+#   = 8.14 GiB allocatable, against a 10 GiB cap.
+kube_memory_reserved: 1Gi
+system_memory_reserved: 31Gi
+
+# No etcd here, so system.slice covers only kubelet, containerd and the guest
+# agent. Allocatable CPU is 3600m.
+kube_cpu_reserved: 100m
+system_cpu_reserved: 300m
+
+eviction_hard:
+  memory.available: "1Gi"

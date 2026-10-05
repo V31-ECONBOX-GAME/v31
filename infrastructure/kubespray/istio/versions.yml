@@ -1,0 +1,69 @@
+---
+# Pinned versions for the Istio ambient track. Verified 2026-09-26 against the
+# Istio and Gateway API release artifacts. Keep in step with values/*.yaml;
+# install.yml asserts that they agree.
+
+istio_version: "1.31.1"
+istio_namespace: istio-system
+istio_ingress_namespace: istio-ingress
+
+# OCI is the supported chart channel from Istio 1.31 onward. The HTTPS repo is
+# the fallback: set istio_chart_source to "repo" to use it.
+istio_chart_source: oci
+istio_chart_registry: "oci://ghcr.io/istio/release/charts"
+istio_chart_repo_name: istio
+istio_chart_repo_url: "https://blob.istio.io/istio-release/charts"
+
+# standard-install.yaml at v1.6.2 carries ten CRDs, every one annotated
+# gateway.networking.k8s.io/channel: standard -- GatewayClass, Gateway, HTTPRoute,
+# GRPCRoute, TCPRoute, UDPRoute, TLSRoute, ListenerSet, ReferenceGrant and
+# BackendTLSPolicy. What is missing from the standard channel is not a kind but a
+# field: HTTPRoute.rules[].retry is experimental-only, which is why nothing here
+# uses it. HTTPRoute.rules[].timeouts (request, backendRequest) and
+# Gateway.spec.infrastructure (labels, annotations, parametersRef) are both
+# standard, and both are load-bearing here.
+# Istio 1.31's own docs pin v1.6.0; v1.6.2 is the newest patch of that minor.
+gateway_api_version: "v1.6.2"
+gateway_api_channel: standard
+gateway_api_manifest_url: >-
+  https://github.com/kubernetes-sigs/gateway-api/releases/download/{{ gateway_api_version }}/{{ gateway_api_channel }}-install.yaml
+
+helm_version: "v3.22.0"
+
+# Helmfile drives every chart; see istio/helmfile.yaml. install.yml runs
+# `helmfile apply` instead of looping helm upgrade per release.
+helmfile_version: "1.8.0"
+
+# helmfile diff/apply are built on the helm-diff plugin -- without it `helmfile
+# apply` cannot tell drift from a no-op and fails with: unknown command "diff".
+helm_diff_version: "3.15.15"
+
+# helm-diff-linux-<arch>.tgz. Installed by unpacking rather than
+# `helm plugin install <git-url>`: that path needs git, which these nodes do not
+# have, and adding git just to fetch a plugin is a dependency for nothing.
+helm_diff_sha256:
+  arm64: "fc046bf3c3f63a435741fe8c37a9d740dfa17ea7f5f0c2a9da2c0222bb4384e6"
+  amd64: "504e99410611daa70702362e1b10dc74929df8a912cb3f6b5d21d1ee9d0cb7d9"
+helm_sha256:
+  arm64: "f14e804dfee240f55525b667488fe9adca349e63e00c9af634c0beb1421ac310"
+  amd64: "1e4ab49e429626cf6c6958d914248b78c9730803c2751b87627e171dc800e7bb"
+
+# helmfile_<ver>_linux_<arch>.tar.gz -- install.yml runs on a NODE, so these are
+# the linux sums. scripts/tools.sh fetches the darwin build for the control
+# machine and verifies it against the release's own checksums.txt.
+helmfile_sha256:
+  arm64: "01037dc187840a778ec65eae66b549b63d619a853540c8983f90d73ccbce5033"
+  amd64: "35d5d39fc608342b23fc7ce1dd0c3bf0c96cc07ec3796507ab6894a5d172bf20"
+
+# The gateway Service keeps fixed nodePorts whatever its type, so the mesh edge is
+# reachable at <node>:30080 even before a LoadBalancer implementation exists.
+istio_gateway_service_type: LoadBalancer
+
+# kube-vip address pool for istio-ingress. Owned by the kube-vip track; set to true
+# only if this track should create it. 192.168.139.240-.245 measured unused.
+istio_apply_kubevip_pool: false
+
+istio_deploy_sample_app: true
+
+# The standalone gateway chart is an alternative to the Gateway API path and is off.
+istio_install_gateway_chart: false

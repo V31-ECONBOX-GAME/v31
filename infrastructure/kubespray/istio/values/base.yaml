@@ -1,0 +1,12 @@
+---
+# istio/base 1.31.1 - CRDs and cluster-scoped RBAC. Must be installed first.
+profile: ambient
+defaultRevision: default
+
+global:
+  istioNamespace: istio-system
+  # Single cluster: the remote-secret reader identity is not used.
+  enableReaderRBAC: false
+
+base:
+  enableCRDTemplates: true

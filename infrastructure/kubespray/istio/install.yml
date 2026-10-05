@@ -1,0 +1,408 @@
+---
+# Istio 1.31 in ambient mode: ztunnel for L4, waypoint proxies (Envoy) for L7,
+# plus a Gateway API edge. Runs on the first control-plane node against
+# /etc/kubernetes/admin.conf, after Kubespray and Calico are up.
+#
+#   ansible-playbook -i inventory/v31/hosts.yaml istio/install.yml
+
+- name: Istio ambient mesh
+  hosts: "{{ istio_host_pattern | default('kube_control_plane[0]') }}"
+  become: true
+  gather_facts: true
+  vars_files:
+    - versions.yml
+  vars:
+    istio_dir: /opt/v31/istio
+    kubeconfig_path: /etc/kubernetes/admin.conf
+    helm_bin: /usr/local/bin/helm
+    kubectl_bin: /usr/local/bin/kubectl
+    istio_helm_timeout: 10m
+    helm_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+    helm_env:
+      KUBECONFIG: "{{ kubeconfig_path }}"
+      HOME: /root
+    istio_chart_ref:
+      base: "{{ istio_chart_registry ~ '/base' if istio_chart_source == 'oci' else istio_chart_repo_name ~ '/base' }}"
+      istiod: "{{ istio_chart_registry ~ '/istiod' if istio_chart_source == 'oci' else istio_chart_repo_name ~ '/istiod' }}"
+      cni: "{{ istio_chart_registry ~ '/cni' if istio_chart_source == 'oci' else istio_chart_repo_name ~ '/cni' }}"
+      ztunnel: "{{ istio_chart_registry ~ '/ztunnel' if istio_chart_source == 'oci' else istio_chart_repo_name ~ '/ztunnel' }}"
+      gateway: "{{ istio_chart_registry ~ '/gateway' if istio_chart_source == 'oci' else istio_chart_repo_name ~ '/gateway' }}"
+    # Install order, drift detection and values wiring all live in
+    # istio/helmfile.yaml.gotmpl now -- releases are declared there, not looped here.
+    helmfile_bin: /usr/local/bin/helmfile
+    helmfile_env: "{{ helm_env | combine({
+        'ISTIO_VERSION': istio_version,
+        'ISTIO_NAMESPACE': istio_namespace,
+        'ISTIO_INGRESS_NAMESPACE': istio_ingress_namespace,
+        'ISTIO_INSTALL_GATEWAY_CHART': (istio_install_gateway_chart | bool) | lower,
+        'HELM_BIN': helm_bin,
+      }) }}"
+
+  pre_tasks:
+    - name: Load the pinned chart values
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/values/{{ item.file }}"
+        name: "{{ item.name }}"
+      loop:
+        - {file: istiod.yaml, name: istio_values_istiod}
+        - {file: cni.yaml, name: istio_values_cni}
+        - {file: ztunnel.yaml, name: istio_values_ztunnel}
+
+    - name: Fail if versions.yml and the values files disagree
+      ansible.builtin.assert:
+        that:
+          - istio_values_istiod.global.tag == istio_version
+          - istio_values_cni.global.tag == istio_version
+          - istio_values_ztunnel.tag == istio_version
+        fail_msg: "istio_version is {{ istio_version }} but values/*.yaml pin a different tag"
+        quiet: true
+
+    - name: Require an admin kubeconfig on this host
+      ansible.builtin.stat:
+        path: "{{ kubeconfig_path }}"
+      register: istio_kubeconfig
+
+    - name: Fail without a kubeconfig
+      ansible.builtin.assert:
+        that: istio_kubeconfig.stat.exists
+        fail_msg: "{{ kubeconfig_path }} not found; run the Kubespray cluster playbook first"
+        quiet: true
+
+  tasks:
+    - name: Check the installed Helm version
+      ansible.builtin.command:
+        argv: ["{{ helm_bin }}", "version", "--short"]
+      register: istio_helm_version
+      changed_when: false
+      failed_when: false
+
+    - name: Install Helm
+      when: helm_version not in (istio_helm_version.stdout | default(''))
+      block:
+        - name: Download the Helm archive
+          ansible.builtin.get_url:
+            url: "https://get.helm.sh/helm-{{ helm_version }}-linux-{{ helm_arch }}.tar.gz"
+            dest: "/tmp/helm-{{ helm_version }}-{{ helm_arch }}.tar.gz"
+            checksum: "sha256:{{ helm_sha256[helm_arch] }}"
+            mode: "0644"
+
+        - name: Unpack the Helm binary
+          ansible.builtin.unarchive:
+            src: "/tmp/helm-{{ helm_version }}-{{ helm_arch }}.tar.gz"
+            dest: /tmp
+            remote_src: true
+            extra_opts: ["--strip-components=1", "linux-{{ helm_arch }}/helm"]
+
+        - name: Install the Helm binary
+          ansible.builtin.copy:
+            src: /tmp/helm
+            dest: "{{ helm_bin }}"
+            remote_src: true
+            mode: "0755"
+            owner: root
+            group: root
+
+    - name: Check the installed Helmfile version
+      ansible.builtin.command:
+        argv: ["{{ helmfile_bin }}", "--version"]
+      register: istio_helmfile_version
+      changed_when: false
+      failed_when: false
+
+    - name: Install Helmfile
+      when: helmfile_version not in (istio_helmfile_version.stdout | default(''))
+      block:
+        - name: Download the Helmfile archive
+          ansible.builtin.get_url:
+            url: "https://github.com/helmfile/helmfile/releases/download/v{{ helmfile_version }}/helmfile_{{ helmfile_version }}_linux_{{ helm_arch }}.tar.gz"
+            dest: "/tmp/helmfile-{{ helmfile_version }}-{{ helm_arch }}.tar.gz"
+            checksum: "sha256:{{ helmfile_sha256[helm_arch] }}"
+            mode: "0644"
+
+        - name: Unpack the Helmfile binary
+          ansible.builtin.unarchive:
+            src: "/tmp/helmfile-{{ helmfile_version }}-{{ helm_arch }}.tar.gz"
+            dest: /tmp
+            remote_src: true
+            extra_opts: ["helmfile"]
+
+        - name: Install the Helmfile binary
+          ansible.builtin.copy:
+            src: /tmp/helmfile
+            dest: "{{ helmfile_bin }}"
+            remote_src: true
+            mode: "0755"
+            owner: root
+            group: root
+
+    - name: Check the installed helm-diff plugin
+      ansible.builtin.command:
+        argv: ["{{ helm_bin }}", "plugin", "list"]
+      environment: "{{ helm_env }}"
+      register: istio_helm_plugins
+      changed_when: false
+      failed_when: false
+
+    # helmfile diff/apply shell out to `helm diff`. Without the plugin helmfile
+    # cannot distinguish drift from a no-op and every run fails outright.
+    # Unpacked from the release tarball, not `helm plugin install <git-url>`:
+    # that path shells out to git, which these nodes do not have.
+    - name: Install the helm-diff plugin
+      when: helm_diff_version not in (istio_helm_plugins.stdout | default(''))
+      block:
+        - name: Download the helm-diff archive
+          ansible.builtin.get_url:
+            url: "https://github.com/databus23/helm-diff/releases/download/v{{ helm_diff_version }}/helm-diff-linux-{{ helm_arch }}.tgz"
+            dest: "/tmp/helm-diff-{{ helm_diff_version }}-{{ helm_arch }}.tgz"
+            checksum: "sha256:{{ helm_diff_sha256[helm_arch] }}"
+            mode: "0644"
+
+        - name: Create the Helm plugin directory
+          ansible.builtin.file:
+            path: /root/.local/share/helm/plugins
+            state: directory
+            owner: root
+            group: root
+            mode: "0750"
+
+        # The archive carries a top-level diff/ directory, which is exactly the
+        # plugin layout helm expects under HELM_PLUGINS.
+        - name: Unpack the helm-diff plugin
+          ansible.builtin.unarchive:
+            src: "/tmp/helm-diff-{{ helm_diff_version }}-{{ helm_arch }}.tgz"
+            dest: /root/.local/share/helm/plugins
+            remote_src: true
+            owner: root
+            group: root
+
+    - name: Register the Istio chart repository
+      ansible.builtin.command:
+        argv: ["{{ helm_bin }}", "repo", "add", "{{ istio_chart_repo_name }}", "{{ istio_chart_repo_url }}", "--force-update"]
+      environment: "{{ helm_env }}"
+      register: istio_repo_add
+      changed_when: "'has been added' in istio_repo_add.stdout"
+      when: istio_chart_source != 'oci'
+
+    - name: Refresh the Istio chart repository
+      ansible.builtin.command:
+        argv: ["{{ helm_bin }}", "repo", "update", "{{ istio_chart_repo_name }}"]
+      environment: "{{ helm_env }}"
+      changed_when: false
+      when: istio_chart_source != 'oci'
+
+    - name: Read the installed Gateway API bundle version
+      ansible.builtin.command:
+        argv:
+          - "{{ kubectl_bin }}"
+          - get
+          - crd
+          - gateways.gateway.networking.k8s.io
+          - -o
+          - jsonpath={.metadata.annotations.gateway\.networking\.k8s\.io/bundle-version}
+      environment: "{{ helm_env }}"
+      register: istio_gwapi_bundle
+      changed_when: false
+      failed_when: false
+
+    - name: Install the Gateway API CRDs
+      # Server-side apply: the CRDs are too large for a client-side apply annotation.
+      ansible.builtin.command:
+        argv: ["{{ kubectl_bin }}", "apply", "--server-side", "-f", "{{ gateway_api_manifest_url }}"]
+      environment: "{{ helm_env }}"
+      register: istio_gwapi_apply
+      changed_when: istio_gwapi_apply.stdout is search('(created|configured)')
+      when: istio_gwapi_bundle.stdout | default('') != gateway_api_version
+
+    - name: Create the working directory
+      ansible.builtin.file:
+        path: "{{ istio_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Stage the chart values
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/values/"
+        dest: "{{ istio_dir }}/values/"
+        owner: root
+        group: root
+        mode: "0640"
+        directory_mode: "0750"
+
+    # helmfile.yaml resolves `values: [values/x.yaml]` relative to ITSELF, so it has
+    # to land beside the values directory staged above.
+    - name: Stage the Helmfile
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/helmfile.yaml.gotmpl"
+        dest: "{{ istio_dir }}/helmfile.yaml.gotmpl"
+        owner: root
+        group: root
+        mode: "0640"
+
+    - name: Stage the manifests
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/manifests/"
+        dest: "{{ istio_dir }}/manifests/"
+        owner: root
+        group: root
+        mode: "0640"
+        directory_mode: "0750"
+
+    # Helmfile owns install order, drift detection and the values wiring. What used
+    # to be a per-release loop around `helm upgrade` -- with a hand-written manifest
+    # diff to decide whether to apply -- is one declarative file, istio/helmfile.yaml.gotmpl.
+    - name: Show what the charts would change
+      ansible.builtin.command:
+        argv: ["{{ helmfile_bin }}", "-f", "{{ istio_dir }}/helmfile.yaml.gotmpl", "diff", "--detailed-exitcode"]
+      environment: "{{ helmfile_env }}"
+      register: istio_helmfile_diff
+      changed_when: false
+      # 0 = no drift, 2 = drift, anything else is a real error.
+      failed_when: istio_helmfile_diff.rc not in [0, 2]
+
+    - name: Converge the Istio charts
+      ansible.builtin.command:
+        argv: ["{{ helmfile_bin }}", "-f", "{{ istio_dir }}/helmfile.yaml.gotmpl", "apply", "--suppress-diff"]
+      environment: "{{ helmfile_env }}"
+      register: istio_helmfile_apply
+      when: istio_helmfile_diff.rc == 2
+      changed_when: istio_helmfile_apply is not skipped
+
+    - name: Create the kube-vip address pool
+      ansible.builtin.command:
+        argv: ["{{ kubectl_bin }}", "apply", "-f", "{{ istio_dir }}/manifests/kubevip-address-pool.yaml"]
+      environment: "{{ helm_env }}"
+      register: istio_pool_apply
+      changed_when: istio_pool_apply.stdout is search('(created|configured)')
+      when: istio_apply_kubevip_pool | bool
+
+    - name: Provision the edge Gateway
+      when: not (istio_install_gateway_chart | bool)
+      block:
+        - name: Create the edge Gateway
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", "apply", "-f", "{{ istio_dir }}/manifests/ingress-gateway.yaml"]
+          environment: "{{ helm_env }}"
+          register: istio_edge_apply
+          changed_when: istio_edge_apply.stdout is search('(created|configured)')
+
+        - name: Wait for istiod to create the edge Gateway deployment
+          # `kubectl rollout status` errors out on a Deployment that does not exist
+          # yet rather than waiting for it, and istiod creates this one only after it
+          # has seen the Gateway. Poll for existence first.
+          ansible.builtin.command:
+            argv:
+              - "{{ kubectl_bin }}"
+              - get
+              - deployment
+              - v31-edge-istio
+              - --namespace
+              - "{{ istio_ingress_namespace }}"
+              - -o
+              - name
+          environment: "{{ helm_env }}"
+          register: istio_edge_exists
+          changed_when: false
+          failed_when: false
+          until: istio_edge_exists.rc == 0
+          retries: 30
+          delay: 5
+
+        - name: Wait for the edge Gateway deployment
+          ansible.builtin.command:
+            argv:
+              - "{{ kubectl_bin }}"
+              - rollout
+              - status
+              - deployment/v31-edge-istio
+              - --namespace
+              - "{{ istio_ingress_namespace }}"
+              - --timeout
+              - 300s
+          environment: "{{ helm_env }}"
+          changed_when: false
+
+    - name: Deploy the sample application
+      when: istio_deploy_sample_app | bool
+      block:
+        # The waypoint comes first. Nothing may name it before it exists: a Service
+        # carrying istio.io/use-waypoint for a waypoint that has not been created has
+        # an unresolvable reference, and the workload rollout below can hold that
+        # state open for minutes.
+        - name: Create the sample namespace and its waypoint
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", "apply", "-f", "{{ istio_dir }}/manifests/sample-app/namespace.yaml"]
+          environment: "{{ helm_env }}"
+          register: istio_demo_ns
+          changed_when: istio_demo_ns.stdout is search('(created|configured)')
+
+        - name: Wait for istiod to create the waypoint deployment
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", "get", "deployment", "v31-demo-waypoint", "--namespace", "v31-demo", "-o", "name"]
+          environment: "{{ helm_env }}"
+          register: istio_waypoint_exists
+          changed_when: false
+          failed_when: false
+          until: istio_waypoint_exists.rc == 0
+          retries: 30
+          delay: 5
+
+        - name: Wait for the waypoint
+          ansible.builtin.command:
+            argv:
+              - "{{ kubectl_bin }}"
+              - rollout
+              - status
+              - deployment/v31-demo-waypoint
+              - --namespace
+              - v31-demo
+              - --timeout
+              - 300s
+          environment: "{{ helm_env }}"
+          changed_when: false
+
+        - name: Create the sample workloads
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", "apply", "-f", "{{ istio_dir }}/manifests/sample-app/workloads.yaml"]
+          environment: "{{ helm_env }}"
+          register: istio_demo_workloads
+          changed_when: istio_demo_workloads.stdout is search('(created|configured)')
+
+        - name: Wait for the sample workloads
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", "rollout", "status", "deployment/{{ item }}", "-n", "v31-demo", "--timeout", "300s"]
+          environment: "{{ helm_env }}"
+          loop: [echo-v1, echo-v2, client]
+          changed_when: false
+
+        - name: Create the routes and policies
+          ansible.builtin.command:
+            argv: ["{{ kubectl_bin }}", "apply", "-f", "{{ istio_dir }}/manifests/sample-app/mesh.yaml"]
+          environment: "{{ helm_env }}"
+          register: istio_demo_mesh
+          changed_when: istio_demo_mesh.stdout is search('(created|configured)')
+
+    - name: Read the edge address
+      ansible.builtin.command:
+        argv:
+          - "{{ kubectl_bin }}"
+          - get
+          - service
+          - v31-edge-istio
+          - --namespace
+          - "{{ istio_ingress_namespace }}"
+          - -o
+          - jsonpath={.status.loadBalancer.ingress[0].ip}
+      environment: "{{ helm_env }}"
+      register: istio_edge_ip
+      changed_when: false
+      failed_when: false
+      when: not (istio_install_gateway_chart | bool)
+
+    - name: Report the edge address
+      ansible.builtin.debug:
+        msg:
+          - "LoadBalancer: {{ istio_edge_ip.stdout | default('') | ternary(istio_edge_ip.stdout, 'pending - kube-vip has not claimed .241 yet') }}"
+          - "NodePort: http://{{ ansible_default_ipv4.address }}:30080 (Host: echo.v31.local)"
+      when: not (istio_install_gateway_chart | bool)

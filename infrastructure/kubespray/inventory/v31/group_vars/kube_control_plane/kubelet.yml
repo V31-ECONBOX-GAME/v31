@@ -1,0 +1,29 @@
+---
+# Node reservations for cp1/cp2/cp3, which are cgroup-limited to 2 vCPU and 4 GiB
+# inside the OrbStack VM.
+#
+# /proc/meminfo is not cgroup-aware here: every machine reports the VM's
+# MemTotal 43135296Ki (41.14 GiB), so kubelet takes that as node capacity and
+# allocatable memory has to be reserved down to the real cap by hand. Measure the
+# cap before changing these numbers:
+#   ssh cp1 'cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/cpu.max'
+#
+# 41.14 GiB capacity - 1 GiB kube - 38400Mi (37.5 GiB) system - 500 MiB eviction
+#   = 2.15 GiB allocatable, against a 4 GiB cap. The ~1.4 GiB difference is the
+# real off-pod footprint on a stacked control plane: etcd, kubelet, containerd,
+# systemd and the OrbStack guest agent.
+kube_memory_reserved: 1Gi
+system_memory_reserved: 38400Mi
+
+# CPU is left at Kubespray's defaults (100m + 500m, allocatable 1400m) rather than
+# lowered: etcd runs as a host systemd service here, not a static pod, so it is
+# charged to system.slice and has to fit inside system_cpu_reserved along with
+# kubelet and containerd.
+kube_cpu_reserved: 100m
+system_cpu_reserved: 500m
+
+# A floor only. The cgroup kills processes long before kubelet sees this, and it
+# does so without an eviction event or a MemoryPressure condition, so the
+# reservations above are the real protection.
+eviction_hard:
+  memory.available: "500Mi"

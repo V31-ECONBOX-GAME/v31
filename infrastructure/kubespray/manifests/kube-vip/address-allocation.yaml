@@ -1,0 +1,57 @@
+# Every statically-assigned address kube-vip owns on 192.168.139.0/24, and why.
+# Not applied by any tool: this is the reservation record the other tracks read.
+#
+# The whole /24 is OrbStack's DHCP pool (192.168.139.1). Measured 2026-09-26:
+#   - 60 DISCOVERs from synthetic MACs were offered addresses across the whole /24
+#   - offers ignore the client's Requested-IP option (asked .250, was offered .131)
+#   - offers land on addresses that are already answering ARP (no conflict probe)
+#   - allocation is deterministic per client MAC, and a DHCPDECLINE moves the
+#     server to the next address
+# So an address cannot be reserved up front, only defended. Keep this file and
+# scripts/kube-vip.sh preflight in sync.
+
+segment: 192.168.139.0/24
+gateway: 192.168.139.1        # OrbStack: default route, DHCP server, DNS relay
+reservedByOrbStack:
+  - 192.168.139.1
+  - 192.168.139.2
+  - 192.168.139.3             # the macOS host, on bridge102 as 192.168.139.3/23
+
+# Held by the kube-vip leader among cp1/cp2/cp3. Never hand this to anything else.
+controlPlaneVip: 192.168.139.240
+
+# Istio Gateway north-south address. Assigned by annotation, not by a pool, so no
+# kube-vip cloud provider runs and the address is declared here rather than
+# allocated at runtime. Add to the Gateway's v31-edge-options ConfigMap:
+#
+#   service: |
+#     metadata:
+#       annotations:
+#         kube-vip.io/loadbalancerIPs: "192.168.139.241"
+#     spec:
+#       type: LoadBalancer
+#       externalTrafficPolicy: Cluster
+#
+# kube-vip reads kube-vip.io/loadbalancerIPs ahead of spec.loadBalancerIP and
+# status.loadBalancer.ingress, and writes the status itself
+# (disable_service_updates defaults to false).
+serviceVips:
+  istio-ingress/v31-edge-istio: 192.168.139.241
+
+# Free at the time of writing, held for future service VIPs. Verify before use.
+spare:
+  - 192.168.139.242
+  - 192.168.139.243
+  - 192.168.139.244
+  - 192.168.139.245
+
+# DHCP leases observed 2026-09-26 -- and ALREADY WRONG: by 2026-09-27 five of the
+# six had moved by +1 (only w3 held). Kept as the worked example of why nothing in
+# this repo may hard-code a node address. Run scripts/ip-drift.sh for the truth.
+dhcpLeases:
+  cp1: 192.168.139.27
+  cp2: 192.168.139.101
+  cp3: 192.168.139.98
+  w1: 192.168.139.128
+  w2: 192.168.139.143
+  w3: 192.168.139.212

@@ -1,0 +1,74 @@
+---
+# North-south edge. Istiod watches this Gateway and provisions the Deployment and
+# Service itself, named <gateway name>-<gateway class name>: v31-edge-istio.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress
+  labels:
+    kubernetes.io/metadata.name: istio-ingress
+---
+# Strategic-merge patches over the generated Service, Deployment and PDB.
+# Service ports merge on the port number, so name and targetPort are left alone.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: v31-edge-options
+  namespace: istio-ingress
+data:
+  service: |
+    metadata:
+      annotations:
+        # kube-vip reads this ahead of spec.loadBalancerIP and writes the status
+        # itself, so no cloud provider and no address pool are needed.
+        # Reserved in manifests/kube-vip/address-allocation.yaml.
+        kube-vip.io/loadbalancerIPs: "192.168.139.241"
+    spec:
+      type: LoadBalancer
+      externalTrafficPolicy: Cluster
+      ports:
+      - port: 15021
+        nodePort: 30021
+      - port: 80
+        nodePort: 30080
+  deployment: |
+    spec:
+      replicas: 2
+      template:
+        spec:
+          topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                gateway.networking.k8s.io/gateway-name: v31-edge
+  podDisruptionBudget: |
+    spec:
+      minAvailable: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: v31-edge
+  namespace: istio-ingress
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    labels:
+      # Generated gateway pods are not excluded from ambient automatically.
+      istio.io/dataplane-mode: none
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: v31-edge-options
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              v31.org/expose-via-edge: "true"

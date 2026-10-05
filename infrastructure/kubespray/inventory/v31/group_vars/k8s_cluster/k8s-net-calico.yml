@@ -1,0 +1,99 @@
+---
+# Calico 3.31.7 ships with Kubespray v2.32.0; arm64 checksums are present.
+
+calico_cni_name: k8s-pod-network
+calico_pool_name: default-pool
+calico_datastore: kdd
+
+## Encapsulation
+# All six nodes sit on one flat L2 segment (192.168.139.0/24) behind OrbStack's
+# bridge. That bridge was measured to forward frames carrying pod-range source and
+# destination addresses unaltered, so native routing works and encapsulation would
+# be pure overhead for same-subnet traffic.
+#
+# CrossSubnet therefore never encapsulates in this topology, while keeping VXLAN as
+# an automatic fallback if a node ever lands on a different subnet. The vxlan backend
+# distributes routes through the Kubernetes datastore, so no BIRD daemon and no BGP
+# mesh are needed - which matters on 2 vCPU control planes. Choosing no-encap
+# outright would instead require calico_network_backend: bird.
+calico_network_backend: vxlan
+calico_vxlan_mode: CrossSubnet
+# Mutually exclusive with VXLAN (Kubespray asserts this). IPIP also rides IP
+# protocol 4, a worse bet than UDP through a virtualised bridge.
+calico_ipip_mode: Never
+calico_vxlan_vni: 4096
+calico_vxlan_port: 4789
+
+## MTU
+# eth0 is a veth with MTU 1500, and 1500 was confirmed as the true node-to-node path
+# MTU (DF-bit ping: 1472 bytes of payload passes, 1473 fails).
+#
+# 1450 = 1500 - 50 for the VXLAN header. CrossSubnet may encapsulate, so the
+# encapsulated figure is the safe one even though same-subnet traffic - which is all
+# traffic here - is not encapsulated in practice.
+#
+# Both variables are set deliberately: calico_veth_mtu is only read inside
+# `{% if calico_mtu is defined %}` blocks in the calico-node template, so setting it
+# alone is silently ignored. calico_mtu must be a number, not a string.
+calico_mtu: 1450
+calico_veth_mtu: 1450
+
+## IPAM
+nat_outgoing: true
+nat_outgoing_ipv6: false
+calico_ipam_host_local: false
+# 26 = 64 addresses per block, so a node at the 110-pod default takes two blocks.
+# The /18 pool holds 256 blocks.
+calico_pool_blocksize: 26
+calico_ipam_autoallocateblocks: true
+calico_ipam_strictaffinity: false
+calico_ipam_maxblocksperhost: 0
+
+## BGP
+# Not used: the vxlan backend replaces BIRD, so there is no node mesh to peer and
+# nothing to advertise. No upstream router exists on this network either.
+peer_with_router: false
+calico_advertise_cluster_ips: false
+calico_advertise_service_external_ips: []
+calico_advertise_service_loadbalancer_ips: []
+
+## Dataplane
+# Standard iptables dataplane, NOT eBPF. The kernel could carry it - 7.0.14 with
+# CONFIG_BPF_SYSCALL, CONFIG_BPF_JIT and BTF at /sys/kernel/btf/vmlinux - but eBPF
+# mode replaces kube-proxy (Kubespray then skips the addon/kube-proxy phase) and has
+# documented breakage with Istio ambient: ztunnel readiness probes fail, and
+# istio-cni needs Calico CTLB enabled or pods cannot reach the API server during
+# startup. It would also need calico_node_ignorelooserpf, because rp_filter is 2
+# (loose) on these nodes.
+calico_bpf_enabled: false
+# nftables mode is still tech preview upstream.
+calico_nftable_mode: Disabled
+calico_iptables_backend: Auto
+
+## Felix
+# Insert keeps Calico's chains ahead of other host rules. Safe alongside Istio
+# ambient, which uses in-pod redirection: its rules live in each pod's network
+# namespace, so Felix does not race them in the host namespace.
+calico_felix_chaininsertmode: Insert
+# eth0 matches the default pattern. Kept explicit because it is load-bearing for MTU
+# auto-detection and node IP selection on these single-NIC hosts.
+calico_felix_mtu_iface_pattern: "^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"
+calico_ip_auto_method: "interface=eth.*"
+# calico_felix_log_severity_screen / _reporting_interval / _floating_ips were set
+# here and do not exist in Kubespray v2.32.0 -- no default, no template reference.
+# calico_loglevel below is the real FELIX_LOGSEVERITYSCREEN knob. Any Felix setting
+# without a Kubespray variable goes through calico_node_extra_envs.
+calico_iptables_lock_timeout_secs: 10
+calico_loglevel: info
+calico_usage_reporting: false
+
+## Scale
+# Six nodes is far below the one-typha-replica-per-100-nodes guidance.
+typha_enabled: false
+calico_apiserver_enabled: false
+calico_wireguard_enabled: false
+
+calico_node_memory_limit: 500M
+calico_node_cpu_limit: "0"
+calico_node_memory_requests: 64M
+calico_node_cpu_requests: 150m

@@ -1,0 +1,11 @@
+---
+# The control machine, reached only through delegate_to: localhost -- never a
+# cluster member. hosts.yaml sets ansible_become: true under all:vars, which
+# every host inherits including this one, so Kubespray's
+# kubernetes/client : Create kube artifacts dir (delegate_to: localhost,
+# become: false) still tried to sudo on macOS and failed with
+# "sudo: a password is required". Declared here so the delegation runs as the
+# invoking user.
+ansible_connection: local
+ansible_become: false
+ansible_python_interpreter: "{{ ansible_playbook_python }}"
