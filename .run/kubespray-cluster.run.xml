@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="kubespray-cluster" type="ShConfigurationType">
-    <option name="SCRIPT_TEXT" value="docker run --rm -it --mount type=bind,source=&quot;$(pwd)&quot;/inventory/v31,dst=/inventory --mount type=bind,source=&quot;${HOME}&quot;/.orbstack/ssh/id_ed25519,dst=/root/.ssh/id_ed25519 quay.io/kubespray/kubespray:v2.32.0 ansible-playbook -i /inventory/inventory.ini --private-key /root/.ssh/id_ed25519 -b cluster.yml" />
+    <option name="SCRIPT_TEXT" value="docker run --rm -it --mount type=bind,source=&quot;$(pwd)&quot;/inventory/v31,dst=/inventory --mount type=bind,source=&quot;${HOME}&quot;/.orbstack/ssh/id_ed25519,dst=/root/.ssh/id_ed25519 quay.io/kubespray/kubespray:v2.32.0 ansible-playbook -i /inventory/inventory.ini --private-key /root/.ssh/id_ed25519 -b --extra-vars @/inventory/extra-vars.yaml cluster.yml" />
     <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
     <option name="SCRIPT_PATH" value="" />
     <option name="SCRIPT_OPTIONS" value="" />
