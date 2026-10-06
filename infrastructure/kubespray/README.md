@@ -1,5 +1,18 @@
 # V31 Kubernetes cluster
 
+## Machines
+
+OrbStack machines, Ubuntu 26.04 arm64.
+
+| Machine | Role | CPU | Memory | Disk |
+|---|---|---|---|---|
+| control-plane1 | control plane, etcd | 2 | 4 GiB | 50 GiB |
+| control-plane2 | control plane, etcd | 2 | 4 GiB | 50 GiB |
+| control-plane3 | control plane, etcd | 2 | 4 GiB | 50 GiB |
+| worker1 | worker | 4 | 10 GiB | 100 GiB |
+| worker2 | worker | 4 | 10 GiB | 100 GiB |
+| worker3 | worker | 4 | 10 GiB | 100 GiB |
+
 ## Install
 
 ```bash
