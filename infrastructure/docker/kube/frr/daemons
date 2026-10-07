@@ -1,0 +1,2 @@
+bgpd=yes
+frr_global_options="-A 127.0.0.1"

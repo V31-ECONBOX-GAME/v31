@@ -1,0 +1,11 @@
+services:
+  frr:
+    image: quay.io/frrouting/frr:10.7.1
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    volumes:
+      - ./daemons:/etc/frr/daemons:ro
+      - ./frr.conf:/etc/frr/frr.conf:ro
