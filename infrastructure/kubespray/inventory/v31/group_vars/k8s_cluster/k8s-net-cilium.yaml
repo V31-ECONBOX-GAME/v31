@@ -1,0 +1,48 @@
+cilium_kube_proxy_replacement: true
+cilium_enable_bgp_control_plane: true
+cilium_loadbalancer_ip_pools:
+  - name: svc-lb
+    cidrs:
+      - 10.200.0.0/24
+cilium_bgp_cluster_configs:
+  - name: svc-lb
+    spec:
+      nodeSelector:
+        matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: DoesNotExist
+      bgpInstances:
+        - name: svc-lb
+          localASN: 64513
+          peers:
+            - name: kube-frr
+              peerASN: 64512
+              peerAddress: 192.168.139.2
+              peerConfigRef:
+                name: kube-frr
+cilium_bgp_peer_configs:
+  - name: kube-frr
+    spec:
+      timers:
+        connectRetryTimeSeconds: 10
+        holdTimeSeconds: 9
+        keepAliveTimeSeconds: 3
+      gracefulRestart:
+        enabled: true
+      families:
+        - afi: ipv4
+          safi: unicast
+          advertisements:
+            matchLabels:
+              advertisement: svc-lb
+cilium_bgp_advertisements:
+  - name: svc-lb
+    labels:
+      advertisement: svc-lb
+    spec:
+      advertisements:
+        - advertisementType: Service
+          service:
+            addresses:
+              - LoadBalancerIP
+          selector: {}

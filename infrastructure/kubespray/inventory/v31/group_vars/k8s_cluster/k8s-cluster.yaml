@@ -1,1 +1,2 @@
-kube_proxy_mode: nftables
+kube_network_plugin: cilium
+kube_proxy_remove: true
