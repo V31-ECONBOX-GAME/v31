@@ -2,7 +2,7 @@
 
 ## Machines
 
-OrbStack machines, Ubuntu 26.04 arm64.
+OrbStack 2.2.3 machines, Ubuntu 26.04 arm64.
 
 | Machine | Role | CPU | Memory | Disk |
 |---|---|---|---|---|
