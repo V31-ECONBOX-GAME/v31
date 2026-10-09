@@ -1,1 +1,1 @@
-
+kube_resolv_conf: /opt/orbstack-guest/etc/resolv.conf

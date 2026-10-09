@@ -22,6 +22,7 @@ OrbStack 2.2.3 machines, Ubuntu 26.04 arm64.
 docker run --rm -it --platform linux/amd64 \
   --mount type=bind,source="$(pwd)"/inventory/v31,dst=/inventory \
   --mount type=bind,source="${HOME}"/.orbstack/ssh/id_ed25519,dst=/root/.ssh/id_ed25519 \
+  --mount type=bind,source="$(pwd)"/patch/0060-resolvconf.yml,dst=/kubespray/roles/kubernetes/preinstall/tasks/0060-resolvconf.yml \
   quay.io/kubespray/kubespray:v2.32.0 \
   ansible-playbook -i /inventory/inventory.ini --private-key /root/.ssh/id_ed25519 -b --extra-vars @/inventory/extra-vars.yaml cluster.yml
 ```
@@ -32,9 +33,13 @@ docker run --rm -it --platform linux/amd64 \
 docker run --rm -it --platform linux/amd64 \
   --mount type=bind,source="$(pwd)"/inventory/v31,dst=/inventory \
   --mount type=bind,source="${HOME}"/.orbstack/ssh/id_ed25519,dst=/root/.ssh/id_ed25519 \
+  --mount type=bind,source="$(pwd)"/patch/0060-resolvconf.yml,dst=/kubespray/roles/kubernetes/preinstall/tasks/0060-resolvconf.yml \
   quay.io/kubespray/kubespray:v2.32.0 \
   ansible-playbook -i /inventory/inventory.ini --private-key /root/.ssh/id_ed25519 -b --extra-vars @/inventory/extra-vars.yaml reset.yml
 ```
 ```bash
 ../linux-vm/orbstack/resolv-conf.sh link
+```
+```bash
+orb restart control-plane1 control-plane2 control-plane3 worker1 worker2 worker3
 ```
