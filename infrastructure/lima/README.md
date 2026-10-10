@@ -33,7 +33,7 @@ Ubuntu 24.04 arm64 virtual machines, one kernel each.
 | [.50, .59] | Storage |
 | [.60, .99] | Reserved |
 | [.100, .199] | More workers |
-| [.200, .249] | Temporary |
+| [.200, .249] | Sandbox |
 | [.250, .254] | Network devices |
 
 ## 1. Install Lima 2.2.1
