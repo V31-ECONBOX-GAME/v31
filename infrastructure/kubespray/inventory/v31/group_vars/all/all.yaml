@@ -1,0 +1,2 @@
+upstream_dns_servers:
+  - 10.10.0.1
