@@ -13,11 +13,28 @@ Ubuntu 24.04 arm64 virtual machines, one kernel each.
 
 ## Network
 
-| Address | Use |
+| Range | Use | Details |
+|---|---|---|
+| 10.10.0.0/24 | VMs | lima |
+| 10.200.0.0/24 | LoadBalancer | kubespray |
+| 10.233.0.0/18 | Services | kubespray |
+| 10.233.64.0/18 | Pods | kubespray |
+
+### 10.10.0.0/24
+
+| Addresses | Use |
 |---|---|
-| 10.10.0.0/24 | Lima `shared` network |
-| 10.10.0.1 | Gateway, DHCP and DNS, on the Mac |
-| 10.10.0.2–10.10.0.9 | DHCP, first boot only |
+| .1 | Gateway (Mac) |
+| [.2, .9] | DHCP |
+| [.10, .19] | Control plane |
+| [.20, .29] | Workers |
+| [.30, .39] | etcd |
+| [.40, .49] | Ingress |
+| [.50, .59] | Storage |
+| [.60, .99] | Reserved |
+| [.100, .199] | More workers |
+| [.200, .249] | Temporary |
+| [.250, .254] | Network devices |
 
 ## 1. Install Lima 2.2.1
 
