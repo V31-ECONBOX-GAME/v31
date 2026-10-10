@@ -1,0 +1,4 @@
+base: node.yaml
+cpus: 4
+memory: 10GiB
+disk: 100GiB

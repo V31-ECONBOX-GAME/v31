@@ -1,0 +1,3 @@
+base: _base/worker.yaml
+param:
+  ip: 10.10.0.22

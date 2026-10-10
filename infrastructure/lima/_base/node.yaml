@@ -1,0 +1,32 @@
+minimumLimaVersion: 2.2.1
+base:
+- template:_images/ubuntu-24.04
+user:
+  home: /home/{{.User}}
+containerd:
+  user: false
+networks:
+- lima: shared
+portForwards:
+- guestIP: 0.0.0.0
+  proto: any
+  ignore: true
+propagateProxyEnv: false
+provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    hostnamectl set-hostname {{.Name}}
+    systemctl disable --now unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer
+    cat >/etc/netplan/60-lima0.yaml <<EOF
+    network:
+      version: 2
+      ethernets:
+        lima0:
+          dhcp4: false
+          addresses: [{{.Param.ip}}/24]
+          routes: [{to: default, via: 10.10.0.1, metric: 100}]
+          nameservers: {addresses: [10.10.0.1]}
+    EOF
+    chmod 600 /etc/netplan/60-lima0.yaml
+    netplan apply
