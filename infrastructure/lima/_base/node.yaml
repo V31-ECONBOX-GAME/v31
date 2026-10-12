@@ -18,7 +18,7 @@ provision:
     #!/bin/sh
     hostnamectl set-hostname {{.Name}}
     systemctl disable --now unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer
-    cat >/etc/netplan/60-lima0.yaml <<EOF
+    cat >/tmp/60-lima0.yaml <<EOF
     network:
       version: 2
       ethernets:
@@ -28,5 +28,6 @@ provision:
           routes: [{to: default, via: 10.10.0.1, metric: 100}]
           nameservers: {addresses: [10.10.0.1]}
     EOF
-    chmod 600 /etc/netplan/60-lima0.yaml
+    cmp -s /tmp/60-lima0.yaml /etc/netplan/60-lima0.yaml && exit 0
+    install -m 600 /tmp/60-lima0.yaml /etc/netplan/60-lima0.yaml
     netplan apply
