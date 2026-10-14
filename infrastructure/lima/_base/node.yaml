@@ -16,6 +16,7 @@ provision:
 - mode: system
   script: |
     #!/bin/sh
+    set -eu
     hostnamectl set-hostname {{.Name}}
     systemctl disable --now unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer
     cat >/tmp/60-lima0.yaml <<EOF
