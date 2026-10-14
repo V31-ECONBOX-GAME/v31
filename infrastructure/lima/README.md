@@ -14,6 +14,20 @@ Ubuntu 24.04 arm64 virtual machines, one kernel each.
 
 ## Network
 
+```
+Mac                      10.10.0.1
+├─ docker                10.10.0.60
+│  ├─ bridge             10.250.0.1/24
+│  ├─ kube_default       10.251.0.1/24
+│  ├─ frr                10.10.0.60, BGP → routes
+│  ├─ xray               10.251.0.2, Mac 0.0.0.0:1080
+│  └─ routes             default via 10.10.0.1
+│                        10.200.0.x via worker1..3
+├─ control-plane1..3     10.10.0.11..13
+├─ worker1..3            10.10.0.21..23
+└─ routes                10.200.0.0/24 via 10.10.0.60
+```
+
 | Range | Use             | Details |
 |:---:|:---------------:|:---:|
 | 10.10.0.0/24 | VMs             | lima |
