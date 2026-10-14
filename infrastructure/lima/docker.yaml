@@ -1,17 +1,16 @@
-minimumLimaVersion: 2.2.1
 base:
-- template:_images/ubuntu-24.04
+- _base/node.yaml
 - template:docker-rootful
 cpus: 4
 memory: 4GiB
 disk: 100GiB
-propagateProxyEnv: false
 vmOpts:
   vz:
     rosetta:
       enabled: true
       binfmt: true
 param:
+  ip: 10.10.0.60
   containerdSnapshotter: false
 provision:
 - mode: dependency
@@ -57,7 +56,7 @@ provision:
           "defaultMaxUsedSpace": "20GB"
         }
       },
-      "bip": "10.251.0.1/24",
+      "bip": "10.250.0.1/24",
       "default-address-pools": [
         {
           "base": "10.251.0.0/20",
