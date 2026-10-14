@@ -21,7 +21,7 @@ set -euo pipefail
 readonly RANGES=(
   10.200.0.0/24
 )
-readonly BGP_ROUTER=192.168.139.2
+readonly BGP_ROUTER=10.10.0.60
 readonly LABEL=org.v31bank.bgp-route
 readonly PLIST=/Library/LaunchDaemons/$LABEL.plist
 
