@@ -3,7 +3,7 @@
 ## Local server
 
 | Field | Value |
-|---|---|
+|:---:|:---:|
 | Type | `SOCKS5` |
 | Address | `127.0.0.1` |
 | Port | `1080` |

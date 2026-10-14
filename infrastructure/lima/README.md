@@ -3,7 +3,7 @@
 Ubuntu 24.04 arm64 virtual machines, one kernel each.
 
 | Machine | IP | CPU | Memory | Disk |
-|---|---|---|---|---|
+|:---:|:---:|:---:|:---:|:---:|
 | docker | 10.10.0.60 | 4 | 4 GiB | 100 GiB |
 | control-plane1 | 10.10.0.11 | 2 | 4 GiB | 50 GiB |
 | control-plane2 | 10.10.0.12 | 2 | 4 GiB | 50 GiB |
@@ -15,7 +15,7 @@ Ubuntu 24.04 arm64 virtual machines, one kernel each.
 ## Network
 
 | Range | Use             | Details |
-|---|-----------------|---|
+|:---:|:---------------:|:---:|
 | 10.10.0.0/24 | VMs             | lima |
 | 10.200.0.0/24 | LoadBalancer    | kubespray |
 | 10.233.0.0/18 | Services        | kubespray |
@@ -26,7 +26,7 @@ Ubuntu 24.04 arm64 virtual machines, one kernel each.
 ### 10.10.0.0/24
 
 | Addresses | Use |
-|---|---|
+|:---:|:---:|
 | .1 | Gateway (Mac) |
 | [.2, .9] | DHCP |
 | [.10, .19] | Control plane |
