@@ -4,6 +4,10 @@ base:
 cpus: 4
 memory: 4GiB
 disk: 100GiB
+portForwards:
+- guestPort: 1080
+  hostIP: 0.0.0.0
+  proto: any
 vmOpts:
   vz:
     rosetta:
