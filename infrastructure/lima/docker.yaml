@@ -75,6 +75,7 @@ provision:
           "size": 24
         }
       ],
+      "ip-forward-no-drop": true,
       "live-restore": true
     }
     EOF
