@@ -1,2 +1,3 @@
 kube_network_plugin: cilium
 kube_proxy_remove: true
+kube_owner: root
