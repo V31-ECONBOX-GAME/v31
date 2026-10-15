@@ -26,7 +26,7 @@ import org.v31bank.build.constant.Endpoints;
 import org.v31bank.build.constant.Environments;
 
 /**
- * Points Testcontainers at the Lima docker machine when its socket is present.
+ * Configures Testcontainers.
  *
  * @author Xander Wang
  */
