@@ -18,6 +18,7 @@ provision:
     #!/bin/sh
     set -eu
     hostnamectl set-hostname {{.Name}}
+    grep -q "^{{.Param.ip}} {{.Name}}$" /etc/hosts || echo "{{.Param.ip}} {{.Name}}" >>/etc/hosts
     systemctl disable --now unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer
     cat >/tmp/60-lima0.yaml <<EOF
     network:
