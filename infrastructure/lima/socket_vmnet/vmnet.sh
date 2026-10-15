@@ -57,7 +57,7 @@ status() {
 install() {
   local file=socket_vmnet-$VERSION-$(uname -m).tar.gz tmp
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' RETURN
+  trap 'rm -rf "$tmp"; trap - RETURN' RETURN
   curl -fsSL --retry 3 --retry-all-errors -o "$tmp/$file" "$RELEASE/$file"
   curl -fsSL --retry 3 --retry-all-errors -o "$tmp/SHA256SUMS" "$RELEASE/SHA256SUMS"
   (cd "$tmp" && grep " $file\$" SHA256SUMS | shasum -a 256 -c -)
