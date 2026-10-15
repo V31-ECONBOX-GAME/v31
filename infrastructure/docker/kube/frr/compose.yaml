@@ -8,6 +8,7 @@ services:
       - SYS_ADMIN
     security_opt:
       - systempaths=unconfined
+      - apparmor=unconfined
     command: ["sh", "-c", "sysctl -p && exec /usr/lib/frr/docker-start"]
     volumes:
       - ./daemons:/etc/frr/daemons:ro
