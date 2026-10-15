@@ -16,6 +16,7 @@
 
 plugins {
     java
+    id("org.v31bank.testcontainers")
 }
 
 description = "V31 jOOQ smoke test"

@@ -17,6 +17,7 @@
 plugins {
     id("org.v31bank.flyway")
 	id("org.springframework.boot")
+    id("org.v31bank.testcontainers")
 }
 
 dependencies {

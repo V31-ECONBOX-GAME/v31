@@ -70,6 +70,10 @@ gradlePlugin {
 			id = "org.v31bank.integration-test"
 			implementationClass = "org.v31bank.build.test.IntegrationTestPlugin"
 		}
+		testcontainersPlugin {
+			id = "org.v31bank.testcontainers"
+			implementationClass = "org.v31bank.build.test.TestcontainersPlugin"
+		}
 		starterPlugin {
 			id = "org.v31bank.starter"
 			implementationClass = "org.v31bank.build.starters.StarterPlugin"

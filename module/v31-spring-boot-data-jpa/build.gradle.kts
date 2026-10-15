@@ -18,6 +18,7 @@ plugins {
     `java-library`
     id("org.v31bank.auto-configuration")
     id("org.v31bank.optional-dependencies")
+    id("org.v31bank.testcontainers")
 }
 
 description = "V31 Data JPA auto-configuration"
