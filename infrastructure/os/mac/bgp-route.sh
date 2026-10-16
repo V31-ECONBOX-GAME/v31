@@ -40,9 +40,10 @@ EOF
 
 ensure() {
   local range
+  printf "i=\$(route -n get %s | awk '/interface:/ {print \$2}'); " "$BGP_ROUTER"
   for range in "${RANGES[@]}"; do
-    printf "route -n get -net %s 2>/dev/null | grep -q 'gateway: %s' || route -n add -net %s %s; " \
-      "$range" "$BGP_ROUTER" "$range" "$BGP_ROUTER"
+    printf "case \$(route -n get -net %s 2>/dev/null) in *'gateway: %s'*\"interface: \$i\"*) ;; *) route -n delete -net %s 2>/dev/null; route -n add -net %s %s ;; esac; " \
+      "$range" "$BGP_ROUTER" "$range" "$range" "$BGP_ROUTER"
   done
 }
 

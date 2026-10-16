@@ -8,8 +8,9 @@ cilium_loadbalancer_mode: dsr
 cilium_enable_bgp_control_plane: true
 cilium_loadbalancer_ip_pools:
   - name: svc-lb
-    cidrs:
-      - 10.200.0.0/24
+    ranges:
+      - start: 10.200.0.1
+        stop: 10.200.0.254
 cilium_bgp_cluster_configs:
   - name: svc-lb
     spec:
