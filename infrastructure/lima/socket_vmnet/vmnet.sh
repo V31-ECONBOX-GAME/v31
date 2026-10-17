@@ -19,7 +19,7 @@
 set -euo pipefail
 
 readonly VERSION=1.2.2
-readonly RELEASE=https://github.com/lima-vm/socket_vmnet/releases/download/v$VERSION
+readonly RELEASE=https://github.com/V31-ECONBOX-GAME/socket_vmnet/releases/download/v$VERSION
 readonly PREFIX=/opt/socket_vmnet
 readonly HERE=$(cd "$(dirname "$0")" && pwd)
 readonly NETWORKS=$HOME/.lima/_config/networks.yaml
