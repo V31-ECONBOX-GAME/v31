@@ -4,6 +4,8 @@ cilium_auto_direct_node_routes: true
 cilium_native_routing_cidr: 10.233.64.0/18
 cilium_extra_values:
   devices: lima0
+  loadBalancer:
+    algorithm: maglev
 cilium_loadbalancer_mode: dsr
 cilium_enable_bgp_control_plane: true
 cilium_loadbalancer_ip_pools:
@@ -34,8 +36,6 @@ cilium_bgp_peer_configs:
         connectRetryTimeSeconds: 10
         holdTimeSeconds: 9
         keepAliveTimeSeconds: 3
-      gracefulRestart:
-        enabled: true
       families:
         - afi: ipv4
           safi: unicast
