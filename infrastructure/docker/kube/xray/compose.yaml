@@ -3,7 +3,7 @@ services:
     image: ghcr.io/xtls/xray-core:26.3.27
     restart: unless-stopped
     ports:
-      - "1080:1080/tcp"
-      - "1080:1080/udp"
+      - "0.0.0.0:1080:1080/tcp"
+      - "0.0.0.0:1080:1080/udp"
     volumes:
       - ./config.json:/usr/local/etc/xray/config.json:ro
