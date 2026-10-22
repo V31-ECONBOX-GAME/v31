@@ -2,3 +2,45 @@ base: node.yaml
 cpus: 2
 memory: 4GiB
 disk: 50GiB
+provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eu
+    cat >/tmp/kube-apiserver-vip <<'EOF'
+    #!/bin/sh
+    set -u
+    vip=10.200.0.1/32
+    failures=0
+    while :; do
+      if curl -fsk --max-time 15 https://{{.Param.ip}}:6443/readyz >/dev/null; then
+        failures=0
+        ip -o address show dev lo | grep -q "$vip" || ip address add "$vip" dev lo
+      else
+        failures=$((failures + 1))
+        [ "$failures" -lt 3 ] || ip address del "$vip" dev lo 2>/dev/null || true
+      fi
+      sleep 1
+    done
+    EOF
+    cat >/tmp/kube-apiserver-vip.service <<'EOF'
+    [Unit]
+    Description=kube-apiserver VIP
+
+    [Service]
+    ExecStart=/usr/local/sbin/kube-apiserver-vip
+    ExecStopPost=-/usr/sbin/ip address del 10.200.0.1/32 dev lo
+    Restart=always
+    RestartSec=1
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+    cmp -s /tmp/kube-apiserver-vip /usr/local/sbin/kube-apiserver-vip &&
+      cmp -s /tmp/kube-apiserver-vip.service /etc/systemd/system/kube-apiserver-vip.service &&
+      exit 0
+    install -m 755 /tmp/kube-apiserver-vip /usr/local/sbin/kube-apiserver-vip
+    install -m 644 /tmp/kube-apiserver-vip.service /etc/systemd/system/kube-apiserver-vip.service
+    systemctl daemon-reload
+    systemctl enable kube-apiserver-vip.service
+    systemctl restart kube-apiserver-vip.service

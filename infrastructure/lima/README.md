@@ -23,19 +23,21 @@ Mac                      10.10.0.1
 │  ├─ xray               10.251.0.2, Mac 0.0.0.0:1080
 │  └─ routes             default via 10.10.0.1
 │                        10.200.0.x via worker1..3
+│                        10.200.0.1 via control-plane1..3
 ├─ control-plane1..3     10.10.0.11..13
 ├─ worker1..3            10.10.0.21..23
 └─ routes                10.200.0.0/24 via 10.10.0.60
 ```
 
-| Range | Use             | Details |
-|:---:|:---------------:|:---:|
-| 10.10.0.0/24 | VMs             | lima |
-| 10.200.0.0/24 | LoadBalancer    | kubespray |
-| 10.233.0.0/18 | Services        | kubespray |
-| 10.233.64.0/18 | Pods            | kubespray |
-| 10.250.0.0/24 | DefaultBridge   | docker |
-| [10.251.0.0, 10.251.29.255] | UserDefinedBridges | docker |
+| Range | Use             |   Owner    |
+|:---:|:---------------:|:----------:|
+| 10.10.0.0/24 | VMs             |    lima    |
+| 10.200.0.1 | KubeApiserver   |   script   |
+| [10.200.0.2, 10.200.0.254] | LoadBalancer    |   cilium   |
+| 10.233.0.0/18 | Services        | kubernetes |
+| 10.233.64.0/18 | Pods            |   cilium   |
+| 10.250.0.0/24 | DefaultBridge   |   docker   |
+| [10.251.0.0, 10.251.29.255] | UserDefinedBridges |   docker   |
 
 ### 10.10.0.0/24
 
