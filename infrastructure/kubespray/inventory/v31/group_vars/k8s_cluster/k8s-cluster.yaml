@@ -1,3 +1,5 @@
 kube_network_plugin: cilium
 kube_proxy_remove: true
 kube_owner: root
+supplementary_addresses_in_ssl_keys:
+  - 10.200.0.1
