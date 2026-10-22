@@ -1,2 +1,3 @@
 etcd_heartbeat_interval: "100"
 etcd_election_timeout: "1000"
+etcd_backup_retention_count: 5
