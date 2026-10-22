@@ -21,6 +21,7 @@ set -euo pipefail
 readonly CONTROL_PLANE=control-plane1
 readonly ADMIN_CONF=/etc/kubernetes/admin.conf
 readonly SERVER=https://10.200.0.1:6443
+readonly NAME=v31-prod
 readonly CONFIG=$HOME/.kube/config
 
 usage() {
@@ -35,7 +36,11 @@ EOF
 }
 
 config() {
-  limactl shell "$CONTROL_PLANE" sudo cat "$ADMIN_CONF" | sed -E "s#^( *server:).*#\1 $SERVER#"
+  limactl shell "$CONTROL_PLANE" sudo cat "$ADMIN_CONF" | sed -E \
+    -e "s#^( *server:).*#\1 $SERVER#" \
+    -e "s#kubernetes-admin@cluster\.local#$NAME#" \
+    -e "s#cluster\.local#$NAME#" \
+    -e "s#kubernetes-admin#$NAME-admin#"
 }
 
 status() {
