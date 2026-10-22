@@ -11,7 +11,7 @@ cilium_enable_bgp_control_plane: true
 cilium_loadbalancer_ip_pools:
   - name: svc-lb
     ranges:
-      - start: 10.200.0.1
+      - start: 10.200.0.2
         stop: 10.200.0.254
 cilium_bgp_cluster_configs:
   - name: svc-lb
@@ -29,6 +29,21 @@ cilium_bgp_cluster_configs:
               peerAddress: 10.10.0.60
               peerConfigRef:
                 name: kube-frr
+  - name: kube-apiserver
+    spec:
+      nodeSelector:
+        matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+      bgpInstances:
+        - name: kube-apiserver
+          localASN: 64513
+          peers:
+            - name: kube-frr
+              peerASN: 64512
+              peerAddress: 10.10.0.60
+              peerConfigRef:
+                name: kube-apiserver
 cilium_bgp_peer_configs:
   - name: kube-frr
     spec:
@@ -42,6 +57,18 @@ cilium_bgp_peer_configs:
           advertisements:
             matchLabels:
               advertisement: svc-lb
+  - name: kube-apiserver
+    spec:
+      timers:
+        connectRetryTimeSeconds: 10
+        holdTimeSeconds: 9
+        keepAliveTimeSeconds: 3
+      families:
+        - afi: ipv4
+          safi: unicast
+          advertisements:
+            matchLabels:
+              advertisement: kube-apiserver
 cilium_bgp_advertisements:
   - name: svc-lb
     labels:
@@ -53,3 +80,11 @@ cilium_bgp_advertisements:
             addresses:
               - LoadBalancerIP
           selector: {}
+  - name: kube-apiserver
+    labels:
+      advertisement: kube-apiserver
+    spec:
+      advertisements:
+        - advertisementType: Interface
+          interface:
+            name: lo
