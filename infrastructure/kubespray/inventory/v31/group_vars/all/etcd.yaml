@@ -1,0 +1,2 @@
+etcd_heartbeat_interval: "100"
+etcd_election_timeout: "1000"
