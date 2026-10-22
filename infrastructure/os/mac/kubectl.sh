@@ -29,9 +29,9 @@ usage() {
 Usage: $(basename "$0") <command>
 
 Commands:
-  status     show kubectl, whether $CONFIG matches the cluster, and when its certificate expires
-  install    brew install kubectl, write $CONFIG from $CONTROL_PLANE pointing at $SERVER
-  uninstall  remove both
+  status     show kubectl, helm, whether $CONFIG matches the cluster, and when its certificate expires
+  install    brew install kubectl and helm, write $CONFIG from $CONTROL_PLANE pointing at $SERVER
+  uninstall  remove all three
 EOF
 }
 
@@ -47,6 +47,8 @@ status() {
   local version fresh state expires
   version=$(kubectl version --client 2>/dev/null | head -1) || version=missing
   printf '%-15s %s\n' kubectl "$version"
+  version=$(helm version --short 2>/dev/null) || version=missing
+  printf '%-15s %s\n' helm "$version"
   if [ ! -f "$CONFIG" ]; then
     state=missing
   elif ! fresh=$(config 2>/dev/null); then
@@ -64,7 +66,7 @@ status() {
 
 install() {
   local tmp
-  brew install kubernetes-cli
+  brew install kubernetes-cli helm
   tmp=$(mktemp)
   trap 'rm -f "$tmp"; trap - RETURN' RETURN
   config >"$tmp"
@@ -76,7 +78,7 @@ install() {
 
 uninstall() {
   rm -f "$CONFIG"
-  brew uninstall kubernetes-cli
+  brew uninstall kubernetes-cli helm
   echo "uninstalled"
 }
 
