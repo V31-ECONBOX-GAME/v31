@@ -1,0 +1,31 @@
+configs:
+  cm:
+    kustomize.buildOptions: --enable-helm
+redis-ha:
+  enabled: true
+  podDisruptionBudget:
+    maxUnavailable: 1
+  haproxy:
+    podDisruptionBudget:
+      maxUnavailable: 1
+controller:
+  replicas: 1
+server:
+  replicas: 2
+  service:
+    type: LoadBalancer
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+repoServer:
+  replicas: 2
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+applicationSet:
+  replicas: 2
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+dex:
+  enabled: false
