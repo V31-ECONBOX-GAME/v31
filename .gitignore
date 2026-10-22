@@ -8,7 +8,7 @@ generated/
 .kotlin
 .claude
 CLAUDE.md
-infrastructure/kubernetes/*/charts/
+infrastructure/kubernetes/**/charts/
 
 ### IntelliJ IDEA ###
 .idea/*
