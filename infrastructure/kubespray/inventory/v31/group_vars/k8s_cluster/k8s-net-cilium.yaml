@@ -6,6 +6,9 @@ cilium_extra_values:
   devices: lima0
   loadBalancer:
     algorithm: maglev
+  envoy:
+    enabled: false
+  l7Proxy: false
 cilium_loadbalancer_mode: dsr
 cilium_enable_bgp_control_plane: true
 cilium_loadbalancer_ip_pools:
