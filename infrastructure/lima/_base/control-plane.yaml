@@ -1,8 +1,32 @@
 base: node.yaml
 cpus: 2
 memory: 4GiB
-disk: 50GiB
+disk: 20GiB
 provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eu
+    n={{.Name}}
+    mountpoint -q /var/lib/etcd && exit 0
+    grep -q ' /var/lib/etcd ' /etc/fstab || echo "LABEL=lima-cp${n#control-plane}-etcd /var/lib/etcd ext4 defaults,noatime,nofail,x-systemd.device-timeout=10s 0 2" >>/etc/fstab
+    install -d /var/lib/etcd
+    systemctl daemon-reload
+    mount /var/lib/etcd
+    chmod 700 /var/lib/etcd
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eu
+    cat >/tmp/etcd.service.conf <<EOF
+    [Unit]
+    RequiresMountsFor=/var/lib/etcd
+    ConditionPathIsMountPoint=/var/lib/etcd
+    EOF
+    cmp -s /tmp/etcd.service.conf /etc/systemd/system/etcd.service.d/override.conf && exit 0
+    install -d /etc/systemd/system/etcd.service.d
+    install -m 644 /tmp/etcd.service.conf /etc/systemd/system/etcd.service.d/override.conf
+    systemctl daemon-reload
 - mode: system
   script: |
     #!/bin/sh
