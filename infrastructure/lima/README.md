@@ -2,15 +2,15 @@
 
 Ubuntu 24.04 arm64 virtual machines, one kernel each.
 
-| Machine | IP | CPU | Memory | Disk |
-|:---:|:---:|:---:|:---:|:---:|
-| docker | 10.10.0.60 | 4 | 4 GiB | 100 GiB |
-| control-plane1 | 10.10.0.11 | 2 | 4 GiB | 50 GiB |
-| control-plane2 | 10.10.0.12 | 2 | 4 GiB | 50 GiB |
-| control-plane3 | 10.10.0.13 | 2 | 4 GiB | 50 GiB |
-| worker1 | 10.10.0.21 | 4 | 10 GiB | 100 GiB |
-| worker2 | 10.10.0.22 | 4 | 10 GiB | 100 GiB |
-| worker3 | 10.10.0.23 | 4 | 10 GiB | 100 GiB |
+| Machine | IP | CPU | Memory | System disk | Data disk | Object storage disk |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| docker | 10.10.0.60 | 2 | 4 GiB | 20 GiB | 30 GiB | - |
+| control-plane1 | 10.10.0.11 | 2 | 4 GiB | 20 GiB | 10 GiB | - |
+| control-plane2 | 10.10.0.12 | 2 | 4 GiB | 20 GiB | 10 GiB | - |
+| control-plane3 | 10.10.0.13 | 2 | 4 GiB | 20 GiB | 10 GiB | - |
+| worker1 | 10.10.0.21 | 4 | 10 GiB | 50 GiB | 80 GiB | 100 GiB |
+| worker2 | 10.10.0.22 | 4 | 10 GiB | 50 GiB | 80 GiB | 100 GiB |
+| worker3 | 10.10.0.23 | 4 | 10 GiB | 50 GiB | 80 GiB | 100 GiB |
 
 ## Network
 
@@ -77,6 +77,9 @@ limactl --version
 ## 3. Docker
 
 ```bash
+limactl disk create docker-data --size 30GiB
+```
+```bash
 limactl start -y docker.yaml
 ```
 ```bash
@@ -91,6 +94,12 @@ docker version
 
 ## 4. Kubernetes machines
 
+```bash
+for n in 1 2 3; do limactl disk create cp$n-etcd --size 10GiB; done
+```
+```bash
+for n in 1 2 3; do limactl disk create worker$n-data --size 80GiB; limactl disk create worker$n-s3 --size 100GiB; done
+```
 ```bash
 for m in control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl start -y $m.yaml; done
 ```
@@ -131,6 +140,33 @@ limactl start worker1
 limactl restart worker1
 ```
 
+## System disk
+
+```bash
+limactl stop worker1
+```
+```bash
+limactl edit worker1 --disk 80
+```
+```bash
+limactl start worker1
+```
+
+## Data disk
+
+```bash
+limactl stop control-plane1
+```
+```bash
+limactl disk resize cp1-etcd --size 20GiB
+```
+```bash
+limactl start control-plane1
+```
+```bash
+limactl shell worker1 sudo pvresize /dev/vdd
+```
+
 ## Recreate one machine
 
 ```bash
@@ -146,7 +182,13 @@ limactl start -y worker1.yaml
 limactl delete -f control-plane1 control-plane2 control-plane3 worker1 worker2 worker3
 ```
 ```bash
+for n in 1 2 3; do limactl disk delete cp$n-etcd worker$n-data worker$n-s3; done
+```
+```bash
 limactl delete -f docker
+```
+```bash
+limactl disk delete docker-data
 ```
 ```bash
 ./docker/cli.sh uninstall
