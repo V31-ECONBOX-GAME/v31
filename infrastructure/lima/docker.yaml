@@ -1,9 +1,12 @@
 base:
 - _base/node.yaml
 - template:_default/mounts
-cpus: 4
+cpus: 2
 memory: 4GiB
-disk: 100GiB
+disk: 20GiB
+additionalDisks:
+- name: docker-data
+  fsType: ext4
 portForwards:
 - guestPort: 1080
   hostIP: 0.0.0.0
@@ -25,13 +28,28 @@ provision:
   script: |
     #!/bin/sh
     set -eu
+    mountpoint -q /data && exit 0
+    grep -q ' /data ' /etc/fstab || echo 'LABEL=lima-docker-data /data ext4 defaults,noatime,nofail,x-systemd.device-timeout=10s 0 2' >>/etc/fstab
+    install -d /data
+    systemctl daemon-reload
+    mount /data
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eu
     sed -i 's/host.lima.internal.*/host.lima.internal host.docker.internal/' /etc/hosts
     cat >/tmp/override.conf <<EOF
     [Socket]
     SocketUser={{.User}}
     EOF
+    cat >/tmp/docker.service.conf <<EOF
+    [Unit]
+    RequiresMountsFor=/data
+    ConditionPathIsMountPoint=/data
+    EOF
     cat >/tmp/daemon.json <<EOF
     {
+      "data-root": "/data/docker",
       "features": {
         "cdi": true
       },
@@ -71,10 +89,12 @@ provision:
     }
     EOF
     cmp -s /tmp/override.conf /etc/systemd/system/docker.socket.d/override.conf &&
+      cmp -s /tmp/docker.service.conf /etc/systemd/system/docker.service.d/override.conf &&
       cmp -s /tmp/daemon.json /etc/docker/daemon.json &&
       exit 0
-    install -d /etc/docker /etc/systemd/system/docker.socket.d
+    install -d /etc/docker /etc/systemd/system/docker.socket.d /etc/systemd/system/docker.service.d
     install -m 644 /tmp/override.conf /etc/systemd/system/docker.socket.d/override.conf
+    install -m 644 /tmp/docker.service.conf /etc/systemd/system/docker.service.d/override.conf
     install -m 644 /tmp/daemon.json /etc/docker/daemon.json
     command -v dockerd >/dev/null || exit 0
     systemctl daemon-reload
