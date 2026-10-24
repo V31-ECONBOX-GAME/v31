@@ -62,7 +62,7 @@ provision:
       "builder": {
         "gc": {
           "enabled": true,
-          "defaultMaxUsedSpace": "20GB"
+          "defaultMaxUsedSpace": "5GB"
         }
       },
       "bip": "10.250.0.1/24",
