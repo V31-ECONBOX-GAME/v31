@@ -14,6 +14,9 @@ provision:
     systemctl daemon-reload
     mount /var/lib/etcd
     chmod 700 /var/lib/etcd
+    if [ -e /etc/systemd/system/etcd.service ]; then
+      systemctl start --no-block etcd.service
+    fi
 - mode: system
   script: |
     #!/bin/sh

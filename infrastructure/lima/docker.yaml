@@ -33,6 +33,9 @@ provision:
     install -d /data
     systemctl daemon-reload
     mount /data
+    if [ -e /usr/lib/systemd/system/docker.service ]; then
+      systemctl start --no-block docker.service
+    fi
 - mode: system
   script: |
     #!/bin/sh
