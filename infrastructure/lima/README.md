@@ -8,9 +8,9 @@ Ubuntu 24.04 arm64 virtual machines, one kernel each.
 | control-plane1 | 10.10.0.11 | 2 | 4 GiB | 20 GiB | 10 GiB | - |
 | control-plane2 | 10.10.0.12 | 2 | 4 GiB | 20 GiB | 10 GiB | - |
 | control-plane3 | 10.10.0.13 | 2 | 4 GiB | 20 GiB | 10 GiB | - |
-| worker1 | 10.10.0.21 | 4 | 10 GiB | 50 GiB | 80 GiB | 100 GiB |
-| worker2 | 10.10.0.22 | 4 | 10 GiB | 50 GiB | 80 GiB | 100 GiB |
-| worker3 | 10.10.0.23 | 4 | 10 GiB | 50 GiB | 80 GiB | 100 GiB |
+| worker1 | 10.10.0.21 | 4 | 10 GiB | 50 GiB | 60 GiB | 50 GiB |
+| worker2 | 10.10.0.22 | 4 | 10 GiB | 50 GiB | 60 GiB | 50 GiB |
+| worker3 | 10.10.0.23 | 4 | 10 GiB | 50 GiB | 60 GiB | 50 GiB |
 
 ## Network
 
@@ -98,7 +98,7 @@ docker version
 for n in 1 2 3; do limactl disk create cp$n-etcd --size 10GiB; done
 ```
 ```bash
-for n in 1 2 3; do limactl disk create worker$n-data --size 80GiB; limactl disk create worker$n-s3 --size 100GiB; done
+for n in 1 2 3; do limactl disk create w$n-s3 --size 50GiB; limactl disk create w$n-data --size 60GiB; done
 ```
 ```bash
 for m in control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl start -y $m.yaml; done
@@ -163,9 +163,6 @@ limactl disk resize cp1-etcd --size 20GiB
 ```bash
 limactl start control-plane1
 ```
-```bash
-limactl shell worker1 sudo pvresize /dev/vdd
-```
 
 ## Recreate one machine
 
@@ -182,7 +179,7 @@ limactl start -y worker1.yaml
 limactl delete -f control-plane1 control-plane2 control-plane3 worker1 worker2 worker3
 ```
 ```bash
-for n in 1 2 3; do limactl disk delete cp$n-etcd worker$n-data worker$n-s3; done
+for n in 1 2 3; do limactl disk delete cp$n-etcd w$n-s3 w$n-data; done
 ```
 ```bash
 limactl delete -f docker
