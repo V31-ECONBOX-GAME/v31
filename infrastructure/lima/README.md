@@ -98,7 +98,7 @@ docker version
 for n in 1 2 3; do limactl disk create cp$n-etcd --size 10GiB; done
 ```
 ```bash
-for n in 1 2 3; do limactl disk create w$n-s3 --size 50GiB; limactl disk create w$n-data --size 60GiB; done
+for n in 1 2 3; do limactl disk create w$n-s3 --size 50GiB; limactl disk create w$n-data1 --size 60GiB; done
 ```
 ```bash
 for m in control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl start -y $m.yaml; done
@@ -179,7 +179,7 @@ limactl start -y worker1.yaml
 limactl delete -f control-plane1 control-plane2 control-plane3 worker1 worker2 worker3
 ```
 ```bash
-for n in 1 2 3; do limactl disk delete cp$n-etcd w$n-s3 w$n-data; done
+for n in 1 2 3; do limactl disk delete cp$n-etcd w$n-s3 w$n-data1; done
 ```
 ```bash
 limactl delete -f docker

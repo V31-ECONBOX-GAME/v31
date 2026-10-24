@@ -2,7 +2,7 @@ base: _base/worker.yaml
 additionalDisks:
 - name: w2-s3
   fsType: xfs
-- name: w2-data
+- name: w2-data1
   format: false
 param:
   ip: 10.10.0.22
