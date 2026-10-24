@@ -1,4 +1,31 @@
 base: node.yaml
 cpus: 4
 memory: 10GiB
-disk: 100GiB
+disk: 50GiB
+provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eu
+    n={{.Name}}
+    mountpoint -q /var/lib/seaweedfs && exit 0
+    grep -q ' /var/lib/seaweedfs ' /etc/fstab || echo "LABEL=lima-w${n#worker}-s3 /var/lib/seaweedfs xfs defaults,noatime,nofail,x-systemd.device-timeout=10s 0 2" >>/etc/fstab
+    install -d /var/lib/seaweedfs
+    systemctl daemon-reload
+    mount /var/lib/seaweedfs
+- mode: system
+  script: |
+    #!/bin/sh
+    set -eu
+    n={{.Name}}
+    keys=$(grep "^LIMA_CIDATA_DISK_[0-9]*_NAME=w${n#worker}-data" /mnt/lima-cidata/lima.env | cut -d= -f1)
+    [ -n "$keys" ]
+    for key in $keys; do
+      dev=/dev/$(grep "^${key%_NAME}_DEVICE=" /mnt/lima-cidata/lima.env | cut -d= -f2)
+      if ! vgs topolvm >/dev/null 2>&1; then
+        vgcreate topolvm "$dev"
+      elif [ "$(pvs --noheadings -o vg_name "$dev" 2>/dev/null | xargs)" != topolvm ]; then
+        vgextend topolvm "$dev"
+      fi
+      pvresize "$dev"
+    done
