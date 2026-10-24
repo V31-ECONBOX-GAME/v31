@@ -1,3 +1,8 @@
 base: _base/worker.yaml
+additionalDisks:
+- name: w3-s3
+  fsType: xfs
+- name: w3-data
+  format: false
 param:
   ip: 10.10.0.23
