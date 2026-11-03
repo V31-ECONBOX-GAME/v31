@@ -125,10 +125,10 @@ limactl copy ./file worker1:/tmp/
 ## Stop and start
 
 ```bash
-for m in control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl stop $m; done
+for m in docker control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl stop $m; done
 ```
 ```bash
-for m in control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl start $m; done
+for m in docker control-plane1 control-plane2 control-plane3 worker1 worker2 worker3; do limactl start $m; done
 ```
 ```bash
 limactl stop worker1
