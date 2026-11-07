@@ -2,3 +2,7 @@ etcd_heartbeat_interval: "100"
 etcd_election_timeout: "1000"
 etcd_backup_retention_count: 5
 etcd_metrics_port: 2381
+cert_management: none
+etcd_secret_changed: false
+etcd_extra_vars:
+  ETCD_TLS_MIN_VERSION: TLS1.3
