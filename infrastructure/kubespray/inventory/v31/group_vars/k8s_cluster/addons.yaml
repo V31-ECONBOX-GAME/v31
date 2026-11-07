@@ -1,0 +1,5 @@
+kubelet_csr_approver_chart_version: 1.2.15
+kubelet_csr_approver_values:
+  providerRegex: '^(control-plane|worker)[0-9]+$'
+  providerIpPrefixes:
+    - 10.10.0.0/24
