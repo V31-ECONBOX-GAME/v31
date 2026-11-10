@@ -13,14 +13,14 @@
     - { role: kubespray_defaults }
     - { role: etcd_certs }
 
-- name: Issue control plane certificates
+- name: Issue controller-manager and scheduler certificates
   hosts: kube_control_plane
   gather_facts: false
   any_errors_fatal: true
   environment: "{{ proxy_disable_env }}"
   roles:
     - { role: kubespray_defaults }
-    - { role: control_plane_certs }
+    - { role: controller_manager_scheduler_certs }
 
 #https://github.com/kubernetes-sigs/kubespray/blob/master/playbooks/cluster.yml
 #-------------------------------------------------------- upgrade compare

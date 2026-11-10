@@ -6,25 +6,25 @@
     group: root
     mode: "0755"
 
-- name: Check the CA certificate
+- name: Check the Kubernetes root CA certificate
   stat:
     path: /etc/kubernetes/ssl/ca.crt
   delegate_to: "{{ groups['kube_control_plane'][0] }}"
   run_once: true
-  register: kube_ca_file
+  register: kube_root_ca_file
 
-- name: Create the CA
-  when: not kube_ca_file.stat.exists
+- name: Create the Kubernetes root CA
+  when: not kube_root_ca_file.stat.exists
   delegate_to: "{{ groups['kube_control_plane'][0] }}"
   run_once: true
   block:
-    - name: Create the CA private key
+    - name: Create the Kubernetes root CA private key
       community.crypto.openssl_privatekey:
         path: /etc/kubernetes/ssl/ca.key
         type: ECC
         curve: secp256r1
         mode: "0600"
-    - name: Create the CA signing request
+    - name: Create the Kubernetes root CA signing request
       community.crypto.openssl_csr_pipe:
         privatekey_path: /etc/kubernetes/ssl/ca.key
         common_name: kubernetes
@@ -37,11 +37,11 @@
           - keyEncipherment
           - keyCertSign
         key_usage_critical: true
-      register: kube_ca_csr
-    - name: Create the CA certificate
+      register: kube_root_ca_csr
+    - name: Create the Kubernetes root CA certificate
       community.crypto.x509_certificate:
         path: /etc/kubernetes/ssl/ca.crt
-        csr_content: "{{ kube_ca_csr.csr }}"
+        csr_content: "{{ kube_root_ca_csr.csr }}"
         privatekey_path: /etc/kubernetes/ssl/ca.key
         provider: selfsigned
         selfsigned_not_after: "+3650d"
