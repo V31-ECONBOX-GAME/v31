@@ -1,0 +1,2 @@
+controller_manager_scheduler_cert_sans: >-
+  {{ ['DNS:' ~ inventory_hostname, 'DNS:localhost', 'IP:' ~ main_ip, 'IP:127.0.0.1', 'IP:::1'] }}

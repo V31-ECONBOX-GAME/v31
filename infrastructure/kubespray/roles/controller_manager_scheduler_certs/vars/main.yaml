@@ -1,0 +1,3 @@
+controller_manager_scheduler_certs:
+  - kube-controller-manager
+  - kube-scheduler
