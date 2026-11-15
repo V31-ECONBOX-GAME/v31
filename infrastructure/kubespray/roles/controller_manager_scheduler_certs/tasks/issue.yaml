@@ -1,0 +1,41 @@
+- name: Check the {{ cert }} certificate
+  stat:
+    path: /etc/kubernetes/ssl/{{ cert }}.crt
+  register: controller_manager_scheduler_cert_file
+
+- name: Issue the {{ cert }} certificate
+  when: not controller_manager_scheduler_cert_file.stat.exists
+  block:
+    - name: Create the {{ cert }} private key
+      community.crypto.openssl_privatekey:
+        path: /etc/kubernetes/ssl/{{ cert }}.key
+        type: ECC
+        curve: secp256r1
+        mode: "0600"
+    - name: Create the {{ cert }} signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: /etc/kubernetes/ssl/{{ cert }}.key
+        common_name: "{{ cert }}"
+        subject_alt_name: "{{ controller_manager_scheduler_cert_sans }}"
+        basic_constraints:
+          - CA:FALSE
+        key_usage:
+          - digitalSignature
+        key_usage_critical: true
+        extended_key_usage:
+          - serverAuth
+      register: controller_manager_scheduler_csr
+    - name: Sign the {{ cert }} certificate
+      community.crypto.x509_certificate_pipe:
+        csr_content: "{{ controller_manager_scheduler_csr.csr }}"
+        provider: ownca
+        ownca_path: /etc/kubernetes/ssl/ca.crt
+        ownca_privatekey_path: /etc/kubernetes/ssl/ca.key
+        ownca_not_after: "+3650d"
+      delegate_to: "{{ groups['kube_control_plane'][0] }}"
+      register: controller_manager_scheduler_signed
+    - name: Write the {{ cert }} certificate
+      copy:
+        content: "{{ controller_manager_scheduler_signed.certificate }}"
+        dest: /etc/kubernetes/ssl/{{ cert }}.crt
+        mode: "0644"

@@ -34,7 +34,6 @@
         basic_constraints_critical: true
         key_usage:
           - digitalSignature
-          - keyEncipherment
           - keyCertSign
         key_usage_critical: true
       register: kube_root_ca_csr
