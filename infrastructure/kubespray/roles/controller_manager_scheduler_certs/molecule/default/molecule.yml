@@ -1,0 +1,28 @@
+driver:
+  name: docker
+platforms:
+  - name: control-plane1
+    image: ubuntu:24.04
+    pre_build_image: true
+    command: sleep infinity
+    groups:
+      - kube_control_plane
+  - name: control-plane2
+    image: ubuntu:24.04
+    pre_build_image: true
+    command: sleep infinity
+    groups:
+      - kube_control_plane
+provisioner:
+  playbooks:
+    prepare: prepare.yaml
+    converge: converge.yaml
+    verify: verify.yaml
+  env:
+    ANSIBLE_ROLES_PATH: ../../../
+  inventory:
+    host_vars:
+      control-plane1:
+        ansible_connection: community.docker.docker_api
+      control-plane2:
+        ansible_connection: community.docker.docker_api

@@ -1,0 +1,95 @@
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars:
+    controller_manager_scheduler_certs:
+      - kube-controller-manager
+      - kube-scheduler
+    cert_files: >-
+      {{ (['ca.crt', 'ca.key'] if inventory_hostname == 'control-plane1' else [])
+         + controller_manager_scheduler_certs | map('regex_replace', '$', '.crt') | list
+         + controller_manager_scheduler_certs | map('regex_replace', '$', '.key') | list }}
+    controller_manager_scheduler_cert_sans: >-
+      {{ ['DNS:' ~ inventory_hostname, 'DNS:localhost', 'IP:' ~ ansible_default_ipv4.address, 'IP:127.0.0.1', 'IP:::1'] }}
+  tasks:
+    - name: Gather the node IP
+      setup:
+        gather_subset: '!all,!min,network'
+        filter: ansible_default_ipv4
+
+    - name: Find the certificate files
+      find:
+        paths: /etc/kubernetes/ssl
+      register: found
+
+    - name: Check that only the expected files exist
+      assert:
+        that: found.files | map(attribute='path') | map('basename') | sort == cert_files | sort
+
+    - name: Check that every private key is readable by root only
+      assert:
+        that: found.files | selectattr('path', 'search', '\.key$') | map(attribute='mode') | unique == ['0600']
+
+    - name: Read the Kubernetes root CA certificate
+      community.crypto.x509_certificate_info:
+        path: /etc/kubernetes/ssl/ca.crt
+        valid_at:
+          day_before_expiry: "+3649d"
+          day_after_expiry: "+3651d"
+      register: kube_root_ca
+      when: inventory_hostname == 'control-plane1'
+
+    - name: Check the Kubernetes root CA certificate
+      assert:
+        that:
+          - kube_root_ca.public_key_type == 'ECC'
+          - kube_root_ca.public_key_data.curve == 'secp256r1'
+          - kube_root_ca.subject.commonName == 'kubernetes'
+          - kube_root_ca.basic_constraints == ['CA:TRUE']
+          - kube_root_ca.basic_constraints_critical
+          - kube_root_ca.key_usage | sort == ['Certificate Sign', 'Digital Signature']
+          - kube_root_ca.key_usage_critical
+          - kube_root_ca.valid_at.day_before_expiry
+          - not kube_root_ca.valid_at.day_after_expiry
+      when: inventory_hostname == 'control-plane1'
+
+    - name: Read the controller-manager and scheduler certificates
+      community.crypto.x509_certificate_info:
+        path: /etc/kubernetes/ssl/{{ item }}.crt
+        valid_at:
+          day_before_expiry: "+3649d"
+          day_after_expiry: "+3651d"
+      loop: "{{ controller_manager_scheduler_certs }}"
+      register: cert
+
+    - name: Check the controller-manager and scheduler certificates
+      assert:
+        that:
+          - item.public_key_type == 'ECC'
+          - item.public_key_data.curve == 'secp256r1'
+          - item.basic_constraints == ['CA:FALSE']
+          - item.issuer.commonName == 'kubernetes'
+          - item.subject.commonName == item.item
+          - item.subject_alt_name | sort == controller_manager_scheduler_cert_sans | sort
+          - item.extended_key_usage == ['TLS Web Server Authentication']
+          - item.valid_at.day_before_expiry
+          - not item.valid_at.day_after_expiry
+      loop: "{{ cert.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read the controller-manager and scheduler certificate files
+      slurp:
+        src: /etc/kubernetes/ssl/{{ item }}.crt
+      loop: "{{ controller_manager_scheduler_certs }}"
+      register: pem
+
+    - name: Verify the controller-manager and scheduler certificates against the Kubernetes root CA
+      command:
+        cmd: openssl verify -CAfile /etc/kubernetes/ssl/ca.crt
+        stdin: "{{ item.content | b64decode }}"
+      loop: "{{ pem.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      delegate_to: control-plane1
+      changed_when: false

@@ -5,10 +5,12 @@ generated/
 !**/src/main/**/build/
 !**/src/test/**/build/
 !**/src/main/generated/
+infrastructure/kubernetes/**/charts/
 .kotlin
 .claude
 CLAUDE.md
-infrastructure/kubernetes/**/charts/
+.codex
+AGENTS.md
 
 ### IntelliJ IDEA ###
 .idea/*
