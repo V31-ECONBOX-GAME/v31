@@ -53,6 +53,17 @@
           - not kube_root_ca.valid_at.day_after_expiry
       when: inventory_hostname == 'control-plane1'
 
+    - name: Read the Kubernetes root CA private key
+      community.crypto.openssl_privatekey_info:
+        path: /etc/kubernetes/ssl/ca.key
+      register: kube_root_ca_key
+      when: inventory_hostname == 'control-plane1'
+
+    - name: Check that the Kubernetes root CA private key matches the Kubernetes root CA certificate
+      assert:
+        that: kube_root_ca_key.public_key_fingerprints.sha256 == kube_root_ca.public_key_fingerprints.sha256
+      when: inventory_hostname == 'control-plane1'
+
     - name: Read the controller-manager and scheduler certificates
       community.crypto.x509_certificate_info:
         path: /etc/kubernetes/ssl/{{ item }}.crt
@@ -68,6 +79,8 @@
           - item.public_key_type == 'ECC'
           - item.public_key_data.curve == 'secp256r1'
           - item.basic_constraints == ['CA:FALSE']
+          - item.key_usage == ['Digital Signature']
+          - item.key_usage_critical
           - item.issuer.commonName == 'kubernetes'
           - item.subject.commonName == item.item
           - item.subject_alt_name | sort == controller_manager_scheduler_cert_sans | sort
@@ -77,6 +90,19 @@
       loop: "{{ cert.results }}"
       loop_control:
         label: "{{ item.item }}"
+
+    - name: Read the controller-manager and scheduler private keys
+      community.crypto.openssl_privatekey_info:
+        path: /etc/kubernetes/ssl/{{ item }}.key
+      loop: "{{ controller_manager_scheduler_certs }}"
+      register: cert_key
+
+    - name: Check that each controller-manager and scheduler private key matches its certificate
+      assert:
+        that: item.0.public_key_fingerprints.sha256 == item.1.public_key_fingerprints.sha256
+      loop: "{{ cert_key.results | zip(cert.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item }}"
 
     - name: Read the controller-manager and scheduler certificate files
       slurp:
