@@ -1,0 +1,42 @@
+- name: Check the {{ cert }} certificate
+  stat:
+    path: /etc/ssl/etcd/ssl/{{ cert }}.pem
+  register: etcd_cert_file
+
+- name: Issue the {{ cert }} certificate
+  when: not etcd_cert_file.stat.exists
+  block:
+    - name: Create the {{ cert }} private key
+      community.crypto.openssl_privatekey:
+        path: /etc/ssl/etcd/ssl/{{ cert }}-key.pem
+        type: ECC
+        curve: secp256r1
+        mode: "0600"
+    - name: Create the {{ cert }} signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: /etc/ssl/etcd/ssl/{{ cert }}-key.pem
+        common_name: etcd-{{ cert }}
+        subject_alt_name: "{{ etcd_cert_sans }}"
+        basic_constraints:
+          - CA:FALSE
+        key_usage:
+          - digitalSignature
+        key_usage_critical: true
+        extended_key_usage:
+          - serverAuth
+          - clientAuth
+      register: etcd_csr
+    - name: Sign the {{ cert }} certificate
+      community.crypto.x509_certificate_pipe:
+        csr_content: "{{ etcd_csr.csr }}"
+        provider: ownca
+        ownca_path: /etc/ssl/etcd/ssl/ca.pem
+        ownca_privatekey_path: /etc/ssl/etcd/ssl/ca-key.pem
+        ownca_not_after: "+3650d"
+      delegate_to: "{{ groups['etcd'][0] }}"
+      register: etcd_signed
+    - name: Write the {{ cert }} certificate
+      copy:
+        content: "{{ etcd_signed.certificate }}"
+        dest: /etc/ssl/etcd/ssl/{{ cert }}.pem
+        mode: "0644"

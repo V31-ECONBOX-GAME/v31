@@ -1,0 +1,82 @@
+- name: Create the etcd certificate directory
+  file:
+    path: /etc/ssl/etcd/ssl
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Check the etcd root CA certificate
+  stat:
+    path: /etc/ssl/etcd/ssl/ca.pem
+  delegate_to: "{{ groups['etcd'][0] }}"
+  run_once: true
+  register: etcd_root_ca_file
+
+- name: Create the etcd root CA
+  when: not etcd_root_ca_file.stat.exists
+  delegate_to: "{{ groups['etcd'][0] }}"
+  run_once: true
+  block:
+    - name: Create the etcd root CA private key
+      community.crypto.openssl_privatekey:
+        path: /etc/ssl/etcd/ssl/ca-key.pem
+        type: ECC
+        curve: secp256r1
+        mode: "0600"
+    - name: Create the etcd root CA signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: /etc/ssl/etcd/ssl/ca-key.pem
+        common_name: etcd-ca
+        use_common_name_for_san: false
+        basic_constraints:
+          - CA:TRUE
+        basic_constraints_critical: true
+        key_usage:
+          - keyCertSign
+          - cRLSign
+          - digitalSignature
+        key_usage_critical: true
+      register: etcd_root_ca_csr
+    - name: Create the etcd root CA certificate
+      community.crypto.x509_certificate:
+        path: /etc/ssl/etcd/ssl/ca.pem
+        csr_content: "{{ etcd_root_ca_csr.csr }}"
+        privatekey_path: /etc/ssl/etcd/ssl/ca-key.pem
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        mode: "0644"
+
+- name: Read the etcd root CA certificate
+  slurp:
+    src: /etc/ssl/etcd/ssl/ca.pem
+  delegate_to: "{{ groups['etcd'][0] }}"
+  run_once: true
+  register: etcd_root_ca_cert
+
+- name: Read the etcd root CA private key
+  slurp:
+    src: /etc/ssl/etcd/ssl/ca-key.pem
+  delegate_to: "{{ groups['etcd'][0] }}"
+  run_once: true
+  no_log: true
+  register: etcd_root_ca_key
+
+- name: Write the etcd root CA certificate
+  copy:
+    content: "{{ etcd_root_ca_cert.content | b64decode }}"
+    dest: /etc/ssl/etcd/ssl/ca.pem
+    mode: "0644"
+
+- name: Write the etcd root CA private key on etcd members
+  copy:
+    content: "{{ etcd_root_ca_key.content | b64decode }}"
+    dest: /etc/ssl/etcd/ssl/ca-key.pem
+    mode: "0600"
+  no_log: true
+
+- name: Issue the etcd certificates
+  include_tasks: issue.yaml
+  loop: "{{ etcd_certs }}"
+  loop_control:
+    loop_var: cert
