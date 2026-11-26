@@ -1,0 +1,5 @@
+etcd_cert_sans: >-
+  {{ groups['etcd'] | map('regex_replace', '^', 'DNS:') | list
+     + ['DNS:etcd.kube-system.svc.cluster.local', 'DNS:etcd.kube-system.svc', 'DNS:etcd.kube-system', 'DNS:etcd']
+     + groups['etcd'] | map('extract', hostvars, 'main_ip') | map('regex_replace', '^', 'IP:') | list
+     + ['DNS:localhost', 'IP:127.0.0.1', 'IP:::1'] }}

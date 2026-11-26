@@ -1,0 +1,4 @@
+etcd_certs:
+  - member-{{ inventory_hostname }}
+  - admin-{{ inventory_hostname }}
+  - node-{{ inventory_hostname }}
