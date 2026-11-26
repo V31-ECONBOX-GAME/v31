@@ -1,0 +1,7 @@
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install the packages a node has
+      raw: apt-get update && apt-get install -y --no-install-recommends python3 python3-cryptography openssl iproute2
+      changed_when: true

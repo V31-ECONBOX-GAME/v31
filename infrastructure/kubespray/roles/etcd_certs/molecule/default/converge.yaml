@@ -1,0 +1,13 @@
+- name: Converge
+  hosts: all
+  gather_facts: false
+  pre_tasks:
+    - name: Gather the node IP
+      setup:
+        gather_subset: '!all,!min,network'
+        filter: ansible_default_ipv4
+    - name: Set the node IP
+      set_fact:
+        main_ip: "{{ ansible_default_ipv4.address }}"
+  roles:
+    - role: etcd_certs

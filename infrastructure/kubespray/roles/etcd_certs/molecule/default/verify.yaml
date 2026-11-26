@@ -1,0 +1,112 @@
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars:
+    etcd_certs:
+      control-plane1: [member-control-plane1, admin-control-plane1, node-control-plane1]
+      control-plane2: [member-control-plane2, admin-control-plane2, node-control-plane2]
+    cert_files: >-
+      {{ ['ca.pem', 'ca-key.pem']
+         + etcd_certs[inventory_hostname] | map('regex_replace', '$', '.pem') | list
+         + etcd_certs[inventory_hostname] | map('regex_replace', '$', '-key.pem') | list }}
+    etcd_cert_sans: >-
+      {{ ['DNS:control-plane1', 'DNS:control-plane2',
+          'DNS:etcd.kube-system.svc.cluster.local', 'DNS:etcd.kube-system.svc', 'DNS:etcd.kube-system', 'DNS:etcd',
+          'IP:' ~ hostvars['control-plane1'].ansible_default_ipv4.address,
+          'IP:' ~ hostvars['control-plane2'].ansible_default_ipv4.address,
+          'DNS:localhost', 'IP:127.0.0.1', 'IP:::1'] }}
+  tasks:
+    - name: Gather the node IP
+      setup:
+        gather_subset: '!all,!min,network'
+        filter: ansible_default_ipv4
+
+    - name: Find the certificate files
+      find:
+        paths: /etc/ssl/etcd/ssl
+        patterns: '*.pem'
+      register: found
+
+    - name: Check that only the expected files exist
+      assert:
+        that: found.files | map(attribute='path') | map('basename') | sort == cert_files | sort
+
+    - name: Check that every private key is readable by root only
+      assert:
+        that: found.files | selectattr('path', 'search', '-key.pem$') | map(attribute='mode') | unique == ['0600']
+
+    - name: Read the etcd root CA certificate
+      community.crypto.x509_certificate_info:
+        path: /etc/ssl/etcd/ssl/ca.pem
+        valid_at:
+          day_before_expiry: "+3649d"
+          day_after_expiry: "+3651d"
+      register: etcd_root_ca
+
+    - name: Check the etcd root CA certificate
+      assert:
+        that:
+          - etcd_root_ca.public_key_type == 'ECC'
+          - etcd_root_ca.public_key_data.curve == 'secp256r1'
+          - etcd_root_ca.subject.commonName == 'etcd-ca'
+          - etcd_root_ca.basic_constraints == ['CA:TRUE']
+          - etcd_root_ca.basic_constraints_critical
+          - etcd_root_ca.key_usage | sort == ['Certificate Sign', 'CRL Sign', 'Digital Signature']
+          - etcd_root_ca.key_usage_critical
+          - etcd_root_ca.fingerprints.sha256 == hostvars['control-plane1'].etcd_root_ca.fingerprints.sha256
+          - etcd_root_ca.valid_at.day_before_expiry
+          - not etcd_root_ca.valid_at.day_after_expiry
+
+    - name: Read the etcd root CA private key
+      community.crypto.openssl_privatekey_info:
+        path: /etc/ssl/etcd/ssl/ca-key.pem
+      register: etcd_root_ca_key
+
+    - name: Check that the etcd root CA private key matches the etcd root CA certificate
+      assert:
+        that: etcd_root_ca_key.public_key_fingerprints.sha256 == etcd_root_ca.public_key_fingerprints.sha256
+
+    - name: Read the etcd certificates
+      community.crypto.x509_certificate_info:
+        path: /etc/ssl/etcd/ssl/{{ item }}.pem
+        valid_at:
+          day_before_expiry: "+3649d"
+          day_after_expiry: "+3651d"
+      loop: "{{ etcd_certs[inventory_hostname] }}"
+      register: cert
+
+    - name: Check the etcd certificates
+      assert:
+        that:
+          - item.public_key_type == 'ECC'
+          - item.public_key_data.curve == 'secp256r1'
+          - item.basic_constraints == ['CA:FALSE']
+          - item.key_usage == ['Digital Signature']
+          - item.key_usage_critical
+          - item.issuer.commonName == 'etcd-ca'
+          - item.subject.commonName == 'etcd-' ~ item.item
+          - item.subject_alt_name | sort == etcd_cert_sans | sort
+          - item.extended_key_usage | sort == ['TLS Web Client Authentication', 'TLS Web Server Authentication']
+          - item.valid_at.day_before_expiry
+          - not item.valid_at.day_after_expiry
+      loop: "{{ cert.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read the etcd private keys
+      community.crypto.openssl_privatekey_info:
+        path: /etc/ssl/etcd/ssl/{{ item }}-key.pem
+      loop: "{{ etcd_certs[inventory_hostname] }}"
+      register: cert_key
+
+    - name: Check that each etcd private key matches its certificate
+      assert:
+        that: item.0.public_key_fingerprints.sha256 == item.1.public_key_fingerprints.sha256
+      loop: "{{ cert_key.results | zip(cert.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item }}"
+
+    - name: Verify the etcd certificates against the etcd root CA
+      command: openssl verify -CAfile /etc/ssl/etcd/ssl/ca.pem /etc/ssl/etcd/ssl/{{ item }}.pem
+      loop: "{{ etcd_certs[inventory_hostname] }}"
+      changed_when: false
