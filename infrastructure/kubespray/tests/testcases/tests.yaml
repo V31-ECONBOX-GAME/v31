@@ -1,0 +1,41 @@
+- name: Define dynamic groups
+  import_playbook: /kubespray/playbooks/boilerplate.yml
+
+- name: Cluster tests
+  hosts: k8s_cluster
+  gather_facts: false
+  vars:
+    hydrophone_version: "0.7.0"
+    hydrophone_arch: "arm64"
+    hydrophone_checksum: "sha256:7edf38be612c32a2ce8b77c293a5a61a22b0fc77ad9fe5c908fc9f73fb283550"
+    hydrophone_parallel: 1
+    hydrophone_path: "{{ bin_dir }}/hydrophone"
+    cluster_ca: "{{ kube_cert_dir }}/ca.crt"
+    etcd_ca: "{{ etcd_cert_dir }}/ca.pem"
+    etcdctl_env:
+      ETCDCTL_ENDPOINTS: https://127.0.0.1:2379
+      ETCDCTL_CACERT: "{{ etcd_ca }}"
+      ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ groups['kube_control_plane'][0] }}.pem"
+      ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ groups['kube_control_plane'][0] }}-key.pem"
+    tls_ports: >-
+      {{ [{'address': ansible_host, 'port': 10250, 'ca': cluster_ca}]
+         + ([{'address': ansible_host, 'port': 6443, 'ca': cluster_ca},
+             {'address': ansible_host, 'port': 2379, 'ca': etcd_ca},
+             {'address': ansible_host, 'port': 2380, 'ca': etcd_ca},
+             {'address': '127.0.0.1', 'port': 10257, 'ca': cluster_ca},
+             {'address': '127.0.0.1', 'port': 10259, 'ca': cluster_ca}]
+            if 'kube_control_plane' in group_names else []) }}
+  tasks:
+    - name: Import Kubespray variables
+      import_role:
+        name: kubespray_defaults
+    - name: Install the Hydrophone for tests
+      import_tasks: 000_install-hydrophone.yaml
+    - name: Testcases for the network
+      import_tasks: 010_check-network.yaml
+    - name: Testcases for the network LoadBalancer
+      import_tasks: 020_check-network-loadbalancer.yaml
+    - name: Testcases for TLS
+      import_tasks: 030_check-tls.yaml
+    - name: Testcases for hardening
+      import_tasks: 040_check-hardening.yaml
